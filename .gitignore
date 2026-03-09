@@ -52,3 +52,26 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# IDE
+.vs/
+.vscode/settings.json
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.*
+
+# MAUI specific
+*.ipa
+*.apk
+*.aab

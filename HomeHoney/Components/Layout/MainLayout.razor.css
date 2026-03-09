@@ -1,0 +1,17 @@
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.app-main {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.app-content {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
