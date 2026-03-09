@@ -14,7 +14,7 @@
 **Language/Version**: C# 12 / .NET 9  
 **Primary Dependencies**: Microsoft.Maui, Microsoft.AspNetCore.Components.WebView.Maui  
 **Storage**: 本次不涉及（SQLite 将在后续需求集成，本次仅预留服务接口）  
-**Testing**: xUnit 2.9+ / bUnit 1.31+ / Moq 4.20+  
+**Testing**: xUnit 2.9+ / bUnit 2.5+ / Moq 4.20+  
 **Target Platform**: iOS 16+、Android 13+ (API 33+)、macOS 14+（可选）、Windows 10+（可选）  
 **Project Type**: mobile-app (MAUI Blazor Hybrid)  
 **Performance Goals**: 应用冷启动 < 3 秒（模拟器环境）  

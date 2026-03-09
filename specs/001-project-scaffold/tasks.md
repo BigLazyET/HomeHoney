@@ -109,7 +109,7 @@
 - [X] T033 [US3] Style mobile-first layout in HomeHoney/wwwroot/css/app.css: bottom tab bar, touch-friendly tap targets (min 44px), safe area insets for iOS notch, responsive typography
 - [X] T034 [US3] Configure splash screen resource in HomeHoney/Resources/Splash/ with HomeHoney branding placeholder (per spec FR-011)
 - [X] T035 [US3] Configure app icon resource in HomeHoney/Resources/AppIcon/ with HomeHoney placeholder icon (per spec FR-011)
-- [X] T036 [US3] Verify app launches with splash screen → home page with empty state + bottom tabs on iOS simulator or Android emulator
+- [X] T036 [US3] Verify app launches with splash screen → home page with empty state + bottom tabs on iOS simulator **and** Android emulator (both platforms required per SC-004)
 
 **Checkpoint**: 应用启动后显示 Splash → HomeHoney 主页 + 空状态提示 + 底部 Tab 导航
 
@@ -121,7 +121,7 @@
 
 - [X] T037 [P] Final `dotnet build` verification: zero errors, zero warnings across all target frameworks
 - [X] T038 [P] Final `dotnet test` verification: all tests pass at 100% pass rate
-- [X] T039 Update README.md at repository root with complete test instructions and project structure overview (per quickstart.md)
+- [X] T039 Finalize README.md at repository root: supplement T018 initial version with complete test instructions and project structure overview (per quickstart.md)
 - [X] T040 Run quickstart.md full validation: clone → build → test → run on simulator end-to-end
 - [X] T041 Verify project directory structure matches plan.md Source Code tree (Components/Pages/, Components/Layout/, Components/Shared/, Services/, HomeHoney.Tests/Unit/, HomeHoney.Tests/Component/)
 

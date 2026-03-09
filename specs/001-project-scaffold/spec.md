@@ -33,7 +33,7 @@
 
 **Acceptance Scenarios**:
 
-1. **Given** 项目脚手架已就绪，**When** 执行 `dotnet test`，**Then** 所有测试通过且输出测试覆盖率报告入口
+1. **Given** 项目脚手架已就绪，**When** 执行 `dotnet test`，**Then** 所有测试通过（coverlet.collector 已集成，支持覆盖率收集）
 2. **Given** 测试项目存在，**When** 查看测试项目结构，**Then** 包含至少一个服务层单元测试示例和一个 Blazor 组件 bUnit 测试示例
 
 ---
@@ -55,9 +55,9 @@
 
 ### Edge Cases
 
-- 目标平台 SDK 未安装时，构建命令应给出清晰错误提示而非隐晦失败
-- .NET SDK 版本不匹配时，`global.json` 应约束所需版本并给出明确提示
-- 首次运行时无网络连接，应用仍应正常启动并展示空状态页面（离线优先原则）
+- 目标平台 SDK 未安装时，`dotnet build` 会输出清晰的 SDK/workload 缺失错误（框架固有行为，无需专项任务）
+- .NET SDK 版本不匹配时，`global.json` 约束所需版本并由 `dotnet` CLI 给出明确提示（T001 覆盖）
+- 首次运行时无网络连接，应用仍正常启动并展示空状态页面（架构固有 — 纯客户端应用，无网络依赖）
 
 ## Requirements *(mandatory)*
 
@@ -71,7 +71,7 @@
 - **FR-006**: 测试项目必须（MUST）引用 xUnit、bUnit 和 Moq 依赖，并包含至少各一个示例测试
 - **FR-007**: 项目必须（MUST）包含 `.editorconfig` 统一代码风格规范
 - **FR-008**: 主应用必须（MUST）配置基础的依赖注入容器（`MauiProgram.cs`），为后续服务注册提供入口
-- **FR-009**: 主应用必须（MUST）包含一个主页面（`MainPage.razor`），展示应用名称和空状态 UI
+- **FR-009**: 主应用必须（MUST）包含一个 Blazor 主页面（`Home.razor`，路由 `/`），展示应用名称和空状态 UI
 - **FR-010**: 项目必须（MUST）包含基础的导航结构（底部 Tab 骨架），为后续页面扩展预留入口
 - **FR-011**: 应用必须（MUST）配置各平台的应用图标和启动画面占位资源
 - **FR-012**: 项目必须（MUST）包含 `README.md`，说明构建、运行和测试的步骤
@@ -79,7 +79,7 @@
 ### Key Entities
 
 - **解决方案（Solution）**：HomeHoney.sln — 包含所有项目的顶层解决方案文件
-- **主应用项目（App Project）**：HomeHoney — MAUI Blazor Hybrid 应用项目，包含 Pages/、Shared/、Services/ 目录结构
+- **主应用项目（App Project）**：HomeHoney — MAUI Blazor Hybrid 应用项目，包含 Pages/、Layout/、Shared/、Services/ 目录结构
 - **测试项目（Test Project）**：HomeHoney.Tests — xUnit + bUnit 测试项目，包含 Unit/、Component/ 目录结构
 
 ## Assumptions
@@ -93,9 +93,9 @@
 
 ### Measurable Outcomes
 
-- **SC-001**: 从克隆仓库到首次成功构建，耗时不超过 5 分钟（不含 SDK 安装时间）
+- **SC-001**: 从克隆仓库到首次成功构建，耗时不超过 5 分钟（不含 SDK 安装时间，假设宽带网络用于 NuGet restore）
 - **SC-002**: `dotnet build` 零错误零警告完成
 - **SC-003**: `dotnet test` 所有测试通过（100% 通过率）
-- **SC-004**: 应用在 iOS 模拟器和 Android 模拟器上均可启动并展示主页面
-- **SC-005**: 项目目录结构符合章程原则 I（组件化架构）的目录规范（Pages/、Shared/、Services/）
-- **SC-006**: 新开发者阅读 README 后可独立完成环境搭建和首次运行
+- **SC-004**: 应用在 iOS 模拟器和 Android 模拟器上**分别**启动并展示主页面（两个平台均需验证）
+- **SC-005**: 项目目录结构符合章程原则 I（组件化架构）的目录规范（Pages/、Layout/、Shared/、Services/）
+- **SC-006**: README 包含从零到构建成功的完整命令序列（前置条件、克隆、构建、测试、运行），无需参考外部文档即可完成首次构建
