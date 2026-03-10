@@ -1,0 +1,46 @@
+@page "/settings/home-layout"
+@inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
+@using HomeHoney.Models
+
+<section class="content-page">
+    <span class="page-eyebrow">首页布局</span>
+    <h1>首页模块顺序与可见性</h1>
+    <p>决定首页先展示哪些摘要模块，优先把你最常查看的内容放在前面。</p>
+
+    <div class="choice-list">
+        @foreach (var moduleType in Preferences.HomeModuleOrder)
+        {
+            var isHidden = Preferences.HiddenHomeModules.Contains(moduleType);
+            <div class="choice-item is-static">
+                <div>
+                    <strong>@GetLabel(moduleType)</strong>
+                    <span>@(isHidden ? "当前已隐藏" : "当前显示")</span>
+                </div>
+                <div class="choice-actions">
+                    <button class="button-secondary small" @onclick="() => MoveUpAsync(moduleType)">上移</button>
+                    <button class="button-secondary small" @onclick="() => MoveDownAsync(moduleType)">下移</button>
+                    <button class="button-primary small" @onclick="() => ToggleVisibilityAsync(moduleType, isHidden)">@((isHidden ? "显示" : "隐藏"))</button>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private UserPreference Preferences => UserPreferenceService.GetPreferences();
+
+    private Task MoveUpAsync(HomeModuleType moduleType) => UserPreferenceService.MoveModuleUpAsync(moduleType);
+
+    private Task MoveDownAsync(HomeModuleType moduleType) => UserPreferenceService.MoveModuleDownAsync(moduleType);
+
+    private Task ToggleVisibilityAsync(HomeModuleType moduleType, bool isHidden) => UserPreferenceService.SetModuleVisibilityAsync(moduleType, isVisible: isHidden);
+
+    private static string GetLabel(HomeModuleType type) => type switch
+    {
+        HomeModuleType.RecentDocuments => "最近资料",
+        HomeModuleType.UpcomingReminders => "即将到期",
+        HomeModuleType.QuickActions => "快捷操作",
+        HomeModuleType.FamilyMessages => "家庭留言摘要",
+        _ => "推荐动作",
+    };
+}

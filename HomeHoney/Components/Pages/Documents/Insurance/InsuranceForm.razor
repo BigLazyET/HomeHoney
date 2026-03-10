@@ -1,0 +1,98 @@
+@page "/documents/insurance/new"
+@page "/documents/insurance/{Id:guid}/edit"
+@inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@inject NavigationManager NavigationManager
+@using HomeHoney.Models
+
+<section class="content-page form-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">保险录入</span>
+            <h1>@(IsEditMode ? "编辑保单" : "新增保单")</h1>
+            <p>录入保单名称、保障对象、关键日期和联系人，后续就能在提醒中心中统一跟进。</p>
+        </div>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <div class="form-grid">
+            <label>
+                <span>保单名称</span>
+                <InputText @bind-Value="_model.PolicyName" />
+            </label>
+            <label>
+                <span>保险公司</span>
+                <InputText @bind-Value="_model.ProviderName" />
+            </label>
+            <label>
+                <span>保障类别</span>
+                <InputSelect @bind-Value="_model.InsuranceCategory">
+                    @foreach (var value in Enum.GetValues<InsuranceCategory>())
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </InputSelect>
+            </label>
+            <label>
+                <span>状态</span>
+                <InputSelect @bind-Value="_model.Status">
+                    @foreach (var value in Enum.GetValues<InsuranceStatus>())
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </InputSelect>
+            </label>
+            <label>
+                <span>生效日期</span>
+                <InputDate @bind-Value="_model.EffectiveDate" />
+            </label>
+            <label>
+                <span>到期日期</span>
+                <InputDate @bind-Value="_model.ExpiryDate" />
+            </label>
+            <label>
+                <span>联系人</span>
+                <InputText @bind-Value="_model.ContactName" />
+            </label>
+            <label>
+                <span>联系电话</span>
+                <InputText @bind-Value="_model.ContactPhone" />
+            </label>
+            <label class="form-grid-span-2">
+                <span>摘要</span>
+                <InputTextArea @bind-Value="_model.Summary" />
+            </label>
+        </div>
+
+        <div class="page-actions">
+            <a class="button-secondary" href="/documents/insurance">取消</a>
+            <button class="button-primary" type="submit">保存</button>
+        </div>
+    </EditForm>
+</section>
+
+@code {
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private InsuranceRecord _model = new();
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is Guid id)
+        {
+            _model = await DocumentCatalogService.GetInsuranceRecordAsync(id) ?? DocumentCatalogService.CreateInsuranceTemplate();
+        }
+        else
+        {
+            _model = DocumentCatalogService.CreateInsuranceTemplate();
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        await DocumentCatalogService.SaveInsuranceRecordAsync(_model);
+        NavigationManager.NavigateTo($"/documents/insurance/{_model.Id}");
+    }
+}

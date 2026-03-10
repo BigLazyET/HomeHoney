@@ -1,0 +1,56 @@
+@page "/memos/{Id:guid}"
+@inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
+@using HomeHoney.Models
+
+@if (_memo is null)
+{
+    <EmptyState Icon="📝" Title="未找到备忘录" Description="该备忘录可能已被归档或移除，请返回列表重新选择。" />
+}
+else
+{
+    <section class="content-page detail-page">
+        <div class="section-heading">
+            <div>
+                <span class="page-eyebrow">家庭备忘录</span>
+                <h1>@_memo.Title</h1>
+                <p>@_memo.Content</p>
+            </div>
+            <div class="page-actions-inline">
+                <a class="button-secondary" href="/memos">返回列表</a>
+                <a class="button-primary" href="@($"/memos/{_memo.Id}/edit")">编辑备忘</a>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <article class="detail-card">
+                <h2>状态信息</h2>
+                <ul>
+                    <li>分类：@_memo.MemoCategory</li>
+                    <li>重要级别：@_memo.Importance</li>
+                    <li>状态：@_memo.Status</li>
+                    <li>到期时间：@(_memo.DueAt?.ToString("yyyy-MM-dd HH:mm") ?? "未设置")</li>
+                </ul>
+            </article>
+            <article class="detail-card">
+                <h2>后续动作</h2>
+                <ul>
+                    <li>可在提醒中心集中查看</li>
+                    <li>可被首页摘要区优先展示</li>
+                    <li>适合沉淀长期家庭事项</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private Memo? _memo;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _memo = await FamilyCollaborationService.GetMemoAsync(Id);
+    }
+}

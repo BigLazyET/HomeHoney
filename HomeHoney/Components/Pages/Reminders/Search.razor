@@ -1,0 +1,54 @@
+@page "/search"
+@inject HomeHoney.Services.Search.SearchIndexService SearchIndexService
+
+<section class="content-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">全局搜索</span>
+            <h1>跨模块查找</h1>
+            <p>输入关键词后，统一返回保险、说明书、冰箱贴和备忘录结果。</p>
+        </div>
+    </div>
+
+    <div class="search-panel">
+        <InputText @bind-Value="_keyword" placeholder="例如：冰箱、医疗、接娃、采购" />
+        <button class="button-primary" @onclick="RunSearchAsync">搜索</button>
+    </div>
+
+    @if (_hasSearched && _groups.Count == 0)
+    {
+        <EmptyState Icon="🔍" Title="没有找到匹配内容" Description="试试换一个关键词，或者先去资料、冰箱贴和备忘录中补充内容。" />
+    }
+    else
+    {
+        <div class="search-result-groups">
+            @foreach (var group in _groups)
+            {
+                <section class="detail-card">
+                    <h2>@group.Title</h2>
+                    <div class="search-result-list">
+                        @foreach (var item in group.Items)
+                        {
+                            <a class="search-result-item" href="@item.Href">
+                                <strong>@item.Title</strong>
+                                <span>@item.Summary</span>
+                            </a>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private string _keyword = string.Empty;
+    private bool _hasSearched;
+    private IReadOnlyList<HomeHoney.Services.Search.SearchGroupResult> _groups = [];
+
+    private async Task RunSearchAsync()
+    {
+        _groups = await SearchIndexService.SearchAsync(_keyword);
+        _hasSearched = true;
+    }
+}

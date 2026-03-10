@@ -1,14 +1,21 @@
-﻿<nav class="tab-bar">
-    <NavLink class="tab-item" href="" Match="NavLinkMatch.All">
-        <span class="tab-icon">🏠</span>
-        <span class="tab-label">首页</span>
-    </NavLink>
-    <NavLink class="tab-item" href="search">
-        <span class="tab-icon">🔍</span>
-        <span class="tab-label">搜索</span>
-    </NavLink>
-    <NavLink class="tab-item" href="profile">
-        <span class="tab-icon">👤</span>
-        <span class="tab-label">我的</span>
-    </NavLink>
+﻿@inject NavigationStructureService NavigationStructureService
+
+<nav class="tab-bar">
+    @foreach (var item in NavigationStructureService.GetPrimaryTabs())
+    {
+        if (item.MatchAll)
+        {
+            <NavLink class="tab-item" href="@item.Href" Match="NavLinkMatch.All">
+                <span class="tab-icon">@item.Icon</span>
+                <span class="tab-label">@item.Title</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="tab-item" href="@item.Href">
+                <span class="tab-icon">@item.Icon</span>
+                <span class="tab-label">@item.Title</span>
+            </NavLink>
+        }
+    }
 </nav>

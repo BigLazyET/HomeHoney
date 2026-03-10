@@ -1,0 +1,61 @@
+@page "/memos"
+@inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
+@using HomeHoney.Models
+
+<section class="content-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">家庭备忘录</span>
+            <h1>长期事项与正式记录</h1>
+            <p>适合保存家规、采购计划、就医记录、教育提醒等需要长期维护的信息。</p>
+        </div>
+        <a class="button-primary" href="/memos/new">新增备忘录</a>
+    </div>
+
+    @if (_memos.Count == 0)
+    {
+        <EmptyState Icon="📝" Title="还没有备忘录" Description="把长期事项写下来，后续能在提醒中心和首页摘要中继续跟进。" />
+    }
+    else
+    {
+        <div class="memo-list">
+            @foreach (var memo in _memos)
+            {
+                <a class="memo-list-item" href="@($"/memos/{memo.Id}")">
+                    <div>
+                        <div class="page-eyebrow">@memo.MemoCategory</div>
+                        <h3>@memo.Title</h3>
+                        <p>@memo.Content</p>
+                    </div>
+                    <div class="memo-meta">
+                        <span>@GetImportance(memo.Importance)</span>
+                        <span>@GetStatus(memo.Status)</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<Memo> _memos = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _memos = await FamilyCollaborationService.GetMemosAsync();
+    }
+
+    private static string GetImportance(MemoImportance importance) => importance switch
+    {
+        MemoImportance.Critical => "关键",
+        MemoImportance.Important => "重要",
+        _ => "普通",
+    };
+
+    private static string GetStatus(MemoStatus status) => status switch
+    {
+        MemoStatus.Completed => "已完成",
+        MemoStatus.Archived => "已归档",
+        _ => "进行中",
+    };
+}

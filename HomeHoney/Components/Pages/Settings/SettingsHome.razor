@@ -1,0 +1,33 @@
+@page "/settings"
+@inject HomeHoney.Services.Navigation.NavigationStructureService NavigationStructureService
+@using HomeHoney.Services.Navigation
+
+<section class="content-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">设置</span>
+            <h1>个性化你的 HomeHoney</h1>
+            <p>从外观、提醒、首页布局和隐私策略四个方向管理长期使用体验。</p>
+        </div>
+        <a class="button-secondary" href="@AppRoutes.Welcome">再次查看引导</a>
+    </div>
+
+    <div class="module-grid">
+        @foreach (var item in NavigationStructureService.GetSettingSections())
+        {
+            <a class="module-card" href="@item.Href">
+                <span class="module-icon">@item.Icon</span>
+                <div>
+                    <h2>@item.Title</h2>
+                </div>
+            </a>
+        }
+        <a class="module-card" href="@AppRoutes.WelcomeFeatures">
+            <span class="module-icon">❓</span>
+            <div>
+                <h2>关于与帮助</h2>
+                <p>查看功能介绍和重新浏览欢迎引导。</p>
+            </div>
+        </a>
+    </div>
+</section>

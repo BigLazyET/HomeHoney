@@ -1,13 +1,159 @@
 ﻿@page "/"
-@using HomeHoney.Components.Shared
+@inject DocumentCatalogService DocumentCatalogService
+@inject FamilyCollaborationService FamilyCollaborationService
+@inject ReminderCenterService ReminderCenterService
+@inject UserPreferenceService UserPreferenceService
 
-<div class="home-page">
-    <header class="home-header">
-        <h1>HomeHoney</h1>
-        <p class="home-subtitle">家庭说明书和保险合同库</p>
-    </header>
+<section class="content-page home-dashboard">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">首页</span>
+            <h1>HomeHoney</h1>
+            <p class="home-subtitle">家庭说明书、保险、冰箱贴和备忘录，都从这里快速进入。</p>
+        </div>
+    </div>
 
-    <EmptyState Icon="📄"
-                Title="暂无文档"
-                Description="还没有文档，点击添加" />
-</div>
+    @foreach (var moduleType in UserPreferenceService.GetPreferences().HomeModuleOrder)
+    {
+        if (IsVisible(moduleType))
+        {
+            switch (moduleType)
+            {
+                case HomeModuleType.QuickActions:
+                    <section class="home-section">
+                        <div class="section-title-row">
+                            <h2>快捷操作</h2>
+                            <a href="@AppRoutes.SettingsHomeLayout">调整顺序</a>
+                        </div>
+                        <QuickActionGrid Actions="@_quickActions" />
+                    </section>
+                    break;
+                case HomeModuleType.UpcomingReminders:
+                    <section class="home-section">
+                        <div class="section-title-row">
+                            <h2>即将到期与待处理</h2>
+                            <a href="@AppRoutes.Reminders">查看全部</a>
+                        </div>
+
+                        @if (_upcomingReminders.Count == 0)
+                        {
+                            <EmptyState Icon="⏰" Title="近期没有紧急事项" Description="录入保单、说明书和家庭待办后，这里会自动显示未来 30 天的重要提醒。" />
+                        }
+                        else
+                        {
+                            <div class="card-stack">
+                                @foreach (var item in _upcomingReminders.Take(3))
+                                {
+                                    <ReminderCard Title="@item.Title"
+                                                  Summary="@item.Summary"
+                                                  SourceLabel="@item.SourceType.ToString()"
+                                                  PriorityLabel="@GetPriorityLabel(item.Priority)"
+                                                  PriorityClass="@item.Priority.ToString().ToLowerInvariant()"
+                                                  DueAt="@item.DueAt"
+                                                  Href="@item.Href" />
+                                }
+                            </div>
+                        }
+                    </section>
+                    break;
+                case HomeModuleType.RecentDocuments:
+                    <section class="home-section">
+                        <div class="section-title-row">
+                            <h2>最近资料</h2>
+                            <a href="@AppRoutes.Documents">进入资料模块</a>
+                        </div>
+
+                        <div class="card-stack">
+                            @foreach (var document in _recentDocuments)
+                            {
+                                <DocumentCard Title="@document.Title"
+                                              Category="@document.Category"
+                                              Description="@document.Summary"
+                                              Href="@document.Href"
+                                              Tags="@document.Tags"
+                                              MetaItems="@GetDocumentMeta(document)" />
+                            }
+                        </div>
+                    </section>
+                    break;
+                case HomeModuleType.FamilyMessages:
+                    <section class="home-section">
+                        <div class="section-title-row">
+                            <h2>家庭留言摘要</h2>
+                            <a href="@AppRoutes.FridgeNotes">查看冰箱贴</a>
+                        </div>
+
+                        <div class="summary-chip-list">
+                            @foreach (var item in _collaborationSummaries)
+                            {
+                                <a class="summary-chip" href="@item.Href">
+                                    <strong>@item.Title</strong>
+                                    <span>@item.Summary</span>
+                                </a>
+                            }
+                        </div>
+                    </section>
+                    break;
+                case HomeModuleType.RecommendedActions:
+                    <section class="home-section">
+                        <div class="section-title-row">
+                            <h2>推荐下一步</h2>
+                            <a href="@AppRoutes.Settings">偏好设置</a>
+                        </div>
+
+                        <div class="summary-chip-list">
+                            <a class="summary-chip" href="@AppRoutes.Documents">
+                                <strong>先完善资料</strong>
+                                <span>把家里最重要的保险和说明书先录入，后面搜索和提醒才会更完整。</span>
+                            </a>
+                            <a class="summary-chip" href="@AppRoutes.Reminders">
+                                <strong>检查近期提醒</strong>
+                                <span>优先处理未来 30 天内需要续保、跟进或确认的重要事项。</span>
+                            </a>
+                            <a class="summary-chip" href="@AppRoutes.SettingsHomeLayout">
+                                <strong>整理首页布局</strong>
+                                <span>把最常用的模块上移，减少家人查找信息的时间。</span>
+                            </a>
+                        </div>
+                    </section>
+                    break;
+            }
+        }
+    }
+</section>
+
+@code {
+    private IReadOnlyList<DocumentSummary> _recentDocuments = [];
+    private IReadOnlyList<ReminderItem> _upcomingReminders = [];
+    private IReadOnlyList<CollaborationSummary> _collaborationSummaries = [];
+
+    private readonly IReadOnlyList<QuickActionItem> _quickActions =
+    [
+        new() { Title = "新增保险", Description = "录入保单和到期日期", Icon = "🛡️", Href = AppRoutes.InsuranceNew },
+        new() { Title = "新增说明书", Description = "补充设备与保修信息", Icon = "📘", Href = AppRoutes.ManualNew },
+        new() { Title = "写冰箱贴", Description = "记录购物或临时提醒", Icon = "🧲", Href = AppRoutes.FridgeNoteNew },
+        new() { Title = "写备忘录", Description = "保存长期事项", Icon = "📝", Href = AppRoutes.MemoNew },
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _recentDocuments = DocumentCatalogService.GetRecentDocuments().ToList();
+        _upcomingReminders = await ReminderCenterService.GetUpcomingAsync();
+        _collaborationSummaries = FamilyCollaborationService.GetRecentMessages().ToList();
+    }
+
+    private bool IsVisible(HomeModuleType moduleType) => !UserPreferenceService.GetPreferences().HiddenHomeModules.Contains(moduleType);
+
+    private static string GetPriorityLabel(ReminderPriority priority) => priority switch
+    {
+        ReminderPriority.High => "高优先级",
+        ReminderPriority.Medium => "中优先级",
+        _ => "低优先级",
+    };
+
+    private static IReadOnlyList<string> GetDocumentMeta(DocumentSummary summary) =>
+    [
+        $"最近更新：{summary.UpdatedAt:MM-dd HH:mm}",
+        $"标签：{string.Join(" · ", summary.Tags)}",
+    ];
+}

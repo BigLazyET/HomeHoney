@@ -1,0 +1,37 @@
+<a class="reminder-card" href="@Href">
+    <div class="reminder-card-top">
+        <span class="reminder-priority @PriorityClass">@PriorityLabel</span>
+        <span class="reminder-due">@DueText</span>
+    </div>
+    <h3>@Title</h3>
+    <p>@Summary</p>
+    @if (!string.IsNullOrWhiteSpace(SourceLabel))
+    {
+        <span class="reminder-source">来自 @SourceLabel</span>
+    }
+</a>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SourceLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public string PriorityLabel { get; set; } = "普通";
+
+    [Parameter]
+    public string PriorityClass { get; set; } = "medium";
+
+    [Parameter]
+    public DateTime DueAt { get; set; } = DateTime.Now;
+
+    [Parameter]
+    public string Href { get; set; } = "/";
+
+    private string DueText => $"{DueAt:MM-dd HH:mm}";
+}

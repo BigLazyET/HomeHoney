@@ -1,0 +1,56 @@
+@page "/documents/manuals"
+@inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@using HomeHoney.Models
+@using HomeHoney.Components.Shared
+
+<section class="content-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">说明书</span>
+            <h1>说明书列表</h1>
+            <p>按空间、设备或品牌整理说明书，临时查找时更快定位到正确资料。</p>
+        </div>
+        <a class="button-primary" href="/documents/manuals/new">新增说明书</a>
+    </div>
+
+    <FilterBar SearchPlaceholder="搜索设备名称、品牌、标签"
+               Filters="_filters" />
+
+    @if (_records.Count == 0)
+    {
+        <EmptyState Icon="📘" Title="还没有说明书资料" Description="录入设备说明书后，可以按空间和品牌快速定位。" />
+    }
+    else
+    {
+        <div class="card-stack">
+            @foreach (var record in _records)
+            {
+                <DocumentCard Title="@record.DeviceName"
+                              Category="说明书"
+                              Subtitle="@($"{record.Brand} · {record.Model}")"
+                              Description="@record.Summary"
+                              Badge="@record.ManualCategory.ToString()"
+                              Href="@($"/documents/manuals/{record.Id}")"
+                              Tags="@record.Tags"
+                              MetaItems="@GetMeta(record)" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<ManualRecord> _records = [];
+    private readonly IReadOnlyList<string> _filters = ["全部", "按空间", "按品牌", "保修中", "即将到期"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _records = await DocumentCatalogService.GetManualRecordsAsync();
+    }
+
+    private static IReadOnlyList<string> GetMeta(ManualRecord record) =>
+    [
+        $"型号：{record.Model}",
+        $"保修截止：{record.WarrantyExpiryDate:yyyy-MM-dd}",
+        $"附件：{record.AttachmentCount} 份",
+    ];
+}

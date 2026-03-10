@@ -1,4 +1,10 @@
 ﻿using HomeHoney.Services;
+using HomeHoney.Services.Collaboration;
+using HomeHoney.Services.Documents;
+using HomeHoney.Services.Navigation;
+using HomeHoney.Services.Preferences;
+using HomeHoney.Services.Reminders;
+using HomeHoney.Services.Search;
 using Microsoft.Extensions.Logging;
 
 namespace HomeHoney;
@@ -19,6 +25,12 @@ public static class MauiProgram
 
 		// Application services
 		builder.Services.AddSingleton<IGreetingService, GreetingService>();
+		builder.Services.AddSingleton<NavigationStructureService>();
+		builder.Services.AddSingleton<UserPreferenceService>();
+		builder.Services.AddSingleton<DocumentCatalogService>();
+		builder.Services.AddSingleton<FamilyCollaborationService>();
+		builder.Services.AddSingleton<SearchIndexService>();
+		builder.Services.AddSingleton<ReminderCenterService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

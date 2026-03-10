@@ -1,0 +1,85 @@
+@page "/documents/manuals/new"
+@page "/documents/manuals/{Id:guid}/edit"
+@inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@inject NavigationManager NavigationManager
+@using HomeHoney.Models
+
+<section class="content-page form-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">说明书录入</span>
+            <h1>@(IsEditMode ? "编辑说明书" : "新增说明书")</h1>
+            <p>录入设备、品牌、型号、所属空间与保修日期，后续即可在提醒中心中统一查看。</p>
+        </div>
+    </div>
+
+    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <div class="form-grid">
+            <label>
+                <span>设备名称</span>
+                <InputText @bind-Value="_model.DeviceName" />
+            </label>
+            <label>
+                <span>品牌</span>
+                <InputText @bind-Value="_model.Brand" />
+            </label>
+            <label>
+                <span>型号</span>
+                <InputText @bind-Value="_model.Model" />
+            </label>
+            <label>
+                <span>说明书类别</span>
+                <InputSelect @bind-Value="_model.ManualCategory">
+                    @foreach (var value in Enum.GetValues<ManualCategory>())
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </InputSelect>
+            </label>
+            <label>
+                <span>购买日期</span>
+                <InputDate @bind-Value="_model.PurchaseDate" />
+            </label>
+            <label>
+                <span>保修截止</span>
+                <InputDate @bind-Value="_model.WarrantyExpiryDate" />
+            </label>
+            <label class="form-grid-span-2">
+                <span>摘要</span>
+                <InputTextArea @bind-Value="_model.Summary" />
+            </label>
+        </div>
+
+        <div class="page-actions">
+            <a class="button-secondary" href="/documents/manuals">取消</a>
+            <button class="button-primary" type="submit">保存</button>
+        </div>
+    </EditForm>
+</section>
+
+@code {
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private ManualRecord _model = new();
+
+    private bool IsEditMode => Id.HasValue;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is Guid id)
+        {
+            _model = await DocumentCatalogService.GetManualRecordAsync(id) ?? DocumentCatalogService.CreateManualTemplate();
+        }
+        else
+        {
+            _model = DocumentCatalogService.CreateManualTemplate();
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        await DocumentCatalogService.SaveManualRecordAsync(_model);
+        NavigationManager.NavigateTo($"/documents/manuals/{_model.Id}");
+    }
+}

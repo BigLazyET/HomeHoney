@@ -69,6 +69,38 @@ HomeHoney.Tests/             # 测试项目
 └── Component/               # bUnit 组件测试
 ```
 
+## 页面结构
+
+当前应用采用移动优先的信息架构：
+
+- 一级导航：**首页 / 资料 / 冰箱贴 / 提醒 / 设置**
+- 欢迎引导：`/welcome` → `/welcome/features` → `/welcome/get-started`
+- 资料模块：`/documents` 下分为保险与说明书，两者都支持列表、详情、新增/编辑
+- 家庭协作：冰箱贴用于短提醒，备忘录用于长期正式记录
+- 跨模块能力：搜索页 `/search` 与提醒中心 `/reminders` 用于统一发现与跳转
+
+### 主要页面路由
+
+```text
+/                         首页摘要
+/welcome                  欢迎页
+/welcome/features         功能介绍
+/welcome/get-started      完成引导
+/documents                资料首页
+/documents/insurance      保险列表
+/documents/manuals        说明书列表
+/fridge-notes             冰箱贴
+/memos                    家庭备忘录
+/reminders                提醒中心
+/search                   全局搜索
+/settings                 设置首页
+```
+
+## 验证状态
+
+- 解决方案构建：`dotnet build HomeHoney.sln` ✅
+- 测试项目：`dotnet test HomeHoney.Tests/HomeHoney.Tests.csproj` ✅
+
 ## 许可证
 
 MIT

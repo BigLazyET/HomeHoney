@@ -1,0 +1,24 @@
+@page "/welcome"
+@using HomeHoney.Services.Navigation
+
+<section class="welcome-screen">
+    <span class="page-eyebrow">欢迎使用</span>
+    <h1>HomeHoney</h1>
+    <p class="page-lead">把家庭保险、说明书、便签和提醒放进一个更好找、更好用的家务大脑。</p>
+
+    <div class="hero-card-group">
+        <article class="hero-card">
+            <h2>第一次打开先做什么？</h2>
+            <p>从欢迎引导了解核心功能，再进入首页选择你最想整理的一类家庭资料。</p>
+        </article>
+        <article class="hero-card">
+            <h2>你将获得什么？</h2>
+            <p>统一入口、清晰页面结构、离线可查找的家庭资料库，以及适合手机使用的提醒与协作体验。</p>
+        </article>
+    </div>
+
+    <div class="page-actions">
+        <a class="button-primary" href="@AppRoutes.WelcomeFeatures">了解核心功能</a>
+        <a class="button-secondary" href="@AppRoutes.WelcomeGetStarted">继续引导</a>
+    </div>
+</section>

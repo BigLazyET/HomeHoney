@@ -1,0 +1,17 @@
+@using HomeHoney.Models
+
+<div class="quick-action-grid">
+    @foreach (var action in Actions)
+    {
+        <a class="quick-action-card" href="@action.Href">
+            <span class="quick-action-icon">@action.Icon</span>
+            <span class="quick-action-title">@action.Title</span>
+            <span class="quick-action-description">@action.Description</span>
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<QuickActionItem> Actions { get; set; } = [];
+}

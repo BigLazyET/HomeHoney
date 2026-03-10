@@ -1,11 +1,55 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject UserPreferenceService UserPreferenceService
 
-<div class="app-layout">
+<div class="app-layout @ThemeClass @(IsWelcomeRoute ? "welcome-layout" : string.Empty)">
+    <header class="app-header">
+        <div>
+            <div class="app-brand">HomeHoney</div>
+            <div class="app-brand-subtitle">家庭资料与提醒中心</div>
+        </div>
+        @if (!IsWelcomeRoute)
+        {
+            <a class="app-header-link" href="@AppRoutes.Search">搜索</a>
+        }
+    </header>
+
     <main class="app-main">
         <article class="app-content">
             @Body
         </article>
     </main>
 
-    <NavMenu />
+    @if (!IsWelcomeRoute)
+    {
+        <NavMenu />
+    }
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserPreferenceService.Changed += HandleStateChanged;
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    private bool IsWelcomeRoute => NavigationManager.ToBaseRelativePath(NavigationManager.Uri).StartsWith("welcome", StringComparison.OrdinalIgnoreCase);
+
+    private string ThemeClass => UserPreferenceService.GetPreferences().ThemeMode switch
+    {
+        ThemeMode.Dark => "theme-dark",
+        ThemeMode.Light => "theme-light",
+        _ => "theme-system",
+    };
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        UserPreferenceService.Changed -= HandleStateChanged;
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+}

@@ -1,0 +1,68 @@
+<a class="document-card" href="@Href">
+    <div class="document-card-header">
+        <div>
+            <div class="document-card-category">@Category</div>
+            <h3>@Title</h3>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Badge))
+        {
+            <span class="document-card-badge">@Badge</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="document-card-subtitle">@Subtitle</p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p class="document-card-description">@Description</p>
+    }
+
+    @if (Tags.Count > 0)
+    {
+        <div class="document-card-tags">
+            @foreach (var tag in Tags)
+            {
+                <span class="document-tag">@tag</span>
+            }
+        </div>
+    }
+
+    @if (MetaItems.Count > 0)
+    {
+        <ul class="document-card-meta">
+            @foreach (var item in MetaItems)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    }
+</a>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Category { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Subtitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Badge { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Href { get; set; } = "/";
+
+    [Parameter]
+    public IReadOnlyList<string> Tags { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> MetaItems { get; set; } = [];
+}

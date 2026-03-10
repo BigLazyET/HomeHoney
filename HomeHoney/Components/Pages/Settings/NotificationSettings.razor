@@ -1,0 +1,38 @@
+@page "/settings/notifications"
+@inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
+@using HomeHoney.Models
+
+<section class="content-page">
+    <span class="page-eyebrow">提醒</span>
+    <h1>通知偏好</h1>
+    <p>按模块管理提醒开关，即使关闭系统通知，应用内提醒中心仍会保留待处理事项。</p>
+
+    <div class="detail-card choice-list">
+        <label class="toggle-item"><InputCheckbox @bind-Value="_settings.InsuranceEnabled" /> <span>保险到期与续保提醒</span></label>
+        <label class="toggle-item"><InputCheckbox @bind-Value="_settings.ManualEnabled" /> <span>说明书保修与维护提醒</span></label>
+        <label class="toggle-item"><InputCheckbox @bind-Value="_settings.FridgeNoteEnabled" /> <span>冰箱贴待办提醒</span></label>
+        <label class="toggle-item"><InputCheckbox @bind-Value="_settings.MemoEnabled" /> <span>备忘录事项提醒</span></label>
+    </div>
+
+    <div class="page-actions">
+        <button class="button-primary" @onclick="SaveAsync">保存设置</button>
+    </div>
+</section>
+
+@code {
+    private NotificationPreference _settings = new();
+
+    protected override void OnInitialized()
+    {
+        var current = UserPreferenceService.GetPreferences().NotificationSettings;
+        _settings = new NotificationPreference
+        {
+            InsuranceEnabled = current.InsuranceEnabled,
+            ManualEnabled = current.ManualEnabled,
+            MemoEnabled = current.MemoEnabled,
+            FridgeNoteEnabled = current.FridgeNoteEnabled,
+        };
+    }
+
+    private Task SaveAsync() => UserPreferenceService.UpdateNotificationSettingsAsync(_settings);
+}

@@ -1,8 +1,36 @@
 .app-layout {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--page-background);
+    color: var(--text-primary);
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(1rem + env(safe-area-inset-top)) 1rem 0.75rem;
+    background: var(--page-background);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.app-brand {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.app-brand-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.app-header-link {
+    color: var(--accent-color);
+    font-weight: 600;
 }
 
 .app-main {
@@ -12,6 +40,9 @@
 }
 
 .app-content {
-    padding: 1rem;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+.welcome-layout .app-header {
+    padding-bottom: 0;
 }

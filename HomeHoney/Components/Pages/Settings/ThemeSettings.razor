@@ -1,0 +1,39 @@
+@page "/settings/theme"
+@inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
+@using HomeHoney.Models
+
+<section class="content-page">
+    <span class="page-eyebrow">外观</span>
+    <h1>主题模式</h1>
+    <p>支持浅色、深色和跟随系统三种模式，修改后当前会话立即生效。</p>
+
+    <div class="choice-list">
+        @foreach (var mode in Enum.GetValues<ThemeMode>())
+        {
+            <button class="choice-item @(Current.ThemeMode == mode ? "is-active" : string.Empty)" @onclick="() => SetThemeAsync(mode)">
+                <strong>@GetLabel(mode)</strong>
+                <span>@GetDescription(mode)</span>
+            </button>
+        }
+    </div>
+</section>
+
+@code {
+    private UserPreference Current => UserPreferenceService.GetPreferences();
+
+    private Task SetThemeAsync(ThemeMode mode) => UserPreferenceService.SetThemeModeAsync(mode);
+
+    private static string GetLabel(ThemeMode mode) => mode switch
+    {
+        ThemeMode.Light => "浅色模式",
+        ThemeMode.Dark => "深色模式",
+        _ => "跟随系统",
+    };
+
+    private static string GetDescription(ThemeMode mode) => mode switch
+    {
+        ThemeMode.Light => "适合白天和高亮环境",
+        ThemeMode.Dark => "适合夜间阅读与低刺激显示",
+        _ => "让系统决定当前视觉模式",
+    };
+}

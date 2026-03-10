@@ -1,6 +1,31 @@
-﻿<Router AppAssembly="@typeof(Routes).Assembly">
+﻿@inject NavigationManager NavigationManager
+@inject UserPreferenceService UserPreferenceService
+
+<Router AppAssembly="@typeof(Routes).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(Layout.MainLayout)">
+            <EmptyState Icon="🧭"
+                        Title="页面不存在"
+                        Description="你访问的页面还没有准备好，可以返回首页继续浏览。" />
+        </LayoutView>
+    </NotFound>
 </Router>
+
+@code {
+    private Task HandleNavigationAsync(NavigationContext context)
+    {
+        var targetPath = $"/{context.Path.Trim('/')}";
+        var isWelcomeRoute = targetPath.StartsWith(AppRoutes.Welcome, StringComparison.OrdinalIgnoreCase);
+
+        if (!UserPreferenceService.IsOnboardingCompleted && !isWelcomeRoute)
+        {
+            NavigationManager.NavigateTo(AppRoutes.Welcome);
+        }
+
+        return Task.CompletedTask;
+    }
+}

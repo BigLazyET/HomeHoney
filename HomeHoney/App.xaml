@@ -5,12 +5,11 @@
              x:Class="HomeHoney.App">
     <Application.Resources>
         <ResourceDictionary>
-
-        <!--
-            For information about styling .NET MAUI pages
-            please refer to the documentation:
-            https://go.microsoft.com/fwlink/?linkid=2282329
-        -->
+            <Color x:Key="PageBackgroundColor">#F5F5F7</Color>
+            <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
+            <Color x:Key="PrimaryTextColor">#1C1C1E</Color>
+            <Color x:Key="SecondaryTextColor">#6C6C70</Color>
+            <Color x:Key="AccentColor">#007AFF</Color>
 
         </ResourceDictionary>
     </Application.Resources>

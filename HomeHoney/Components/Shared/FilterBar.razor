@@ -1,0 +1,23 @@
+<div class="filter-bar">
+    @if (!string.IsNullOrWhiteSpace(SearchPlaceholder))
+    {
+        <div class="filter-search-hint">🔎 @SearchPlaceholder</div>
+    }
+    @if (Filters.Count > 0)
+    {
+        <div class="filter-chip-group">
+            @foreach (var filter in Filters)
+            {
+                <span class="filter-chip">@filter</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<string> Filters { get; set; } = [];
+}

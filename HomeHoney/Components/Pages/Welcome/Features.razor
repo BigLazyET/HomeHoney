@@ -1,0 +1,30 @@
+@page "/welcome/features"
+@using HomeHoney.Services.Navigation
+
+<section class="content-page">
+    <span class="page-eyebrow">核心模块</span>
+    <h1>一个应用，管理整个家庭的信息流</h1>
+    <div class="feature-stack">
+        <article class="feature-card">
+            <h2>资料</h2>
+            <p>统一管理保险与说明书，支持列表、详情、关键日期和后续录入。</p>
+        </article>
+        <article class="feature-card">
+            <h2>冰箱贴与备忘录</h2>
+            <p>高频短提醒和正式长期记录分开管理，兼顾效率与沉淀。</p>
+        </article>
+        <article class="feature-card">
+            <h2>提醒与搜索</h2>
+            <p>不记得内容在哪个模块也没关系，从提醒中心和搜索入口直接找到目标。</p>
+        </article>
+        <article class="feature-card">
+            <h2>设置与个性化</h2>
+            <p>主题、通知、首页布局和隐私策略都能按你的家庭习惯调整。</p>
+        </article>
+    </div>
+
+    <div class="page-actions">
+        <a class="button-secondary" href="@AppRoutes.Welcome">返回欢迎页</a>
+        <a class="button-primary" href="@AppRoutes.WelcomeGetStarted">进入首页前再看一步</a>
+    </div>
+</section>

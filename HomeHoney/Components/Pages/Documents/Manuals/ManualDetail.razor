@@ -1,0 +1,58 @@
+@page "/documents/manuals/{Id:guid}"
+@inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@using HomeHoney.Models
+
+@if (_record is null)
+{
+    <EmptyState Icon="📘" Title="未找到说明书" Description="这份说明书资料可能已被移除，返回列表重新选择。" />
+}
+else
+{
+    <section class="content-page detail-page">
+        <div class="section-heading">
+            <div>
+                <span class="page-eyebrow">说明书详情</span>
+                <h1>@_record.DeviceName</h1>
+                <p>@_record.Summary</p>
+            </div>
+            <div class="page-actions-inline">
+                <a class="button-secondary" href="/documents/manuals">返回列表</a>
+                <a class="button-primary" href="@($"/documents/manuals/{_record.Id}/edit")">编辑资料</a>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <article class="detail-card">
+                <h2>设备信息</h2>
+                <ul>
+                    <li>品牌：@_record.Brand</li>
+                    <li>型号：@_record.Model</li>
+                    <li>类别：@_record.ManualCategory</li>
+                    <li>购买日期：@_record.PurchaseDate.ToString("yyyy-MM-dd")</li>
+                    <li>保修截止：@_record.WarrantyExpiryDate.ToString("yyyy-MM-dd")</li>
+                </ul>
+            </article>
+            <article class="detail-card">
+                <h2>附件与检索</h2>
+                <ul>
+                    <li>附件数量：@_record.AttachmentCount</li>
+                    <li>空间 Id：@_record.SpaceId</li>
+                    <li>标签：@string.Join(" · ", _record.Tags)</li>
+                    <li>适合首页提醒与搜索快速定位</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private ManualRecord? _record;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _record = await DocumentCatalogService.GetManualRecordAsync(Id);
+    }
+}

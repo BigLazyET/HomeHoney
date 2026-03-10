@@ -1,0 +1,34 @@
+@page "/welcome/get-started"
+@using HomeHoney.Services.Navigation
+@inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
+@inject NavigationManager NavigationManager
+
+<section class="content-page">
+    <span class="page-eyebrow">开始使用</span>
+    <h1>推荐从这三步开始</h1>
+    <ol class="step-list">
+        <li>先进入 <strong>资料</strong> 模块，把保险和说明书整理成可搜索的记录。</li>
+        <li>把家人会频繁查看的短事项放到 <strong>冰箱贴</strong>。</li>
+        <li>去 <strong>设置</strong> 里调整主题与提醒，让首页更符合你的习惯。</li>
+    </ol>
+
+    <div class="hero-card-group">
+        <article class="hero-card">
+            <h2>后续还能做什么？</h2>
+            <p>你可以随时在设置中再次查看引导，也可以通过首页快捷入口直接开始录入资料。</p>
+        </article>
+    </div>
+
+    <div class="page-actions">
+        <button class="button-primary" @onclick="CompleteAsync">完成引导，进入首页</button>
+        <a class="button-secondary" href="@AppRoutes.WelcomeFeatures">返回上一页</a>
+    </div>
+</section>
+
+@code {
+    private async Task CompleteAsync()
+    {
+        await UserPreferenceService.CompleteOnboardingAsync();
+        NavigationManager.NavigateTo(AppRoutes.Home, forceLoad: false);
+    }
+}

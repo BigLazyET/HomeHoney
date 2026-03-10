@@ -1,0 +1,58 @@
+@page "/fridge-notes"
+@inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
+@using HomeHoney.Models
+
+<section class="content-page">
+    <div class="section-heading">
+        <div>
+            <span class="page-eyebrow">家庭冰箱贴</span>
+            <h1>快速提醒、购物和留言</h1>
+            <p>适合记录高频、短文本、希望第一眼就看到的家庭事项。</p>
+        </div>
+        <a class="button-primary" href="/fridge-notes/new">新增冰箱贴</a>
+    </div>
+
+    @if (_notes.Count == 0)
+    {
+        <EmptyState Icon="🧲" Title="还没有冰箱贴" Description="写下一条购物事项、接送提醒或家庭留言，让首页也能快速看到。" />
+    }
+    else
+    {
+        <div class="sticky-board">
+            @foreach (var note in _notes)
+            {
+                <a class="sticky-note sticky-note-@note.ColorStyle" href="@($"/fridge-notes/{note.Id}/edit")">
+                    <div class="sticky-note-top">
+                        <span>@note.Category</span>
+                        <span>@GetPriority(note.Priority)</span>
+                    </div>
+                    <h3>@note.Title</h3>
+                    <p>@note.Content</p>
+                    <div class="sticky-note-footer">
+                        @if (note.DueAt is DateTime dueAt)
+                        {
+                            <span>@dueAt.ToString("MM-dd HH:mm")</span>
+                        }
+                        <span>@(note.IsPinned ? "📌 已置顶" : "点击编辑")</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<FridgeNote> _notes = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _notes = await FamilyCollaborationService.GetFridgeNotesAsync();
+    }
+
+    private static string GetPriority(NotePriority priority) => priority switch
+    {
+        NotePriority.Urgent => "紧急",
+        NotePriority.Important => "重要",
+        _ => "普通",
+    };
+}

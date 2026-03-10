@@ -1,0 +1,75 @@
+@page "/documents/insurance/{Id:guid}"
+@inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@using HomeHoney.Models
+
+@if (_record is null)
+{
+    <EmptyState Icon="🛡️" Title="未找到保单" Description="这份保险资料可能已被移除，返回列表重新选择一条记录。" />
+}
+else
+{
+    <section class="content-page detail-page">
+        <div class="section-heading">
+            <div>
+                <span class="page-eyebrow">保险详情</span>
+                <h1>@_record.PolicyName</h1>
+                <p>@_record.Summary</p>
+            </div>
+            <div class="page-actions-inline">
+                <a class="button-secondary" href="/documents/insurance">返回列表</a>
+                <a class="button-primary" href="@($"/documents/insurance/{_record.Id}/edit")">编辑资料</a>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            <article class="detail-card">
+                <h2>保障信息</h2>
+                <ul>
+                    <li>保险公司：@_record.ProviderName</li>
+                    <li>保障类别：@GetCategory(_record.InsuranceCategory)</li>
+                    <li>状态：@GetStatus(_record.Status)</li>
+                    <li>生效时间：@_record.EffectiveDate.ToString("yyyy-MM-dd")</li>
+                    <li>到期时间：@_record.ExpiryDate.ToString("yyyy-MM-dd")</li>
+                </ul>
+            </article>
+            <article class="detail-card">
+                <h2>联系人与附件</h2>
+                <ul>
+                    <li>联系人：@_record.ContactName</li>
+                    <li>联系电话：@_record.ContactPhone</li>
+                    <li>附件数量：@_record.AttachmentCount</li>
+                    <li>标签：@string.Join(" · ", _record.Tags)</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private InsuranceRecord? _record;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _record = await DocumentCatalogService.GetInsuranceRecordAsync(Id);
+    }
+
+    private static string GetCategory(InsuranceCategory category) => category switch
+    {
+        InsuranceCategory.Medical => "医疗险",
+        InsuranceCategory.CriticalIllness => "重疾险",
+        InsuranceCategory.Accident => "意外险",
+        InsuranceCategory.Life => "寿险",
+        _ => "其他",
+    };
+
+    private static string GetStatus(InsuranceStatus status) => status switch
+    {
+        InsuranceStatus.Active => "生效中",
+        InsuranceStatus.PendingRenewal => "待续保",
+        InsuranceStatus.Expired => "已失效",
+        _ => "已归档",
+    };
+}
