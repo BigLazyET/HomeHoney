@@ -2,87 +2,110 @@
 @page "/documents/insurance/{Id:guid}/edit"
 @inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 
-<section class="content-page form-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">保险录入</span>
-            <h1>@(IsEditMode ? "编辑保单" : "新增保单")</h1>
-            <p>录入保单名称、保障对象、关键日期和联系人，后续就能在提醒中心中统一跟进。</p>
-        </div>
-    </div>
+@if (_isMissingRecord)
+{
+    <EmptyState Icon="🛡️" Title="未找到保单" Description="这份保单可能已被删除，返回列表后可以重新选择或新建一条资料。" />
+}
+else
+{
+    <section class="content-page form-page">
+        <PageHeader Eyebrow="保险录入"
+                    Title="@(IsEditMode ? "编辑保单" : "新增保单")"
+                    Description="录入保单名称、保障对象、关键日期和联系人，后续就能在提醒中心中统一跟进。"
+                    BackHref="@BackHref"
+                    BackText="@(IsEditMode ? "返回保单详情" : "返回保险列表")">
+            @if (IsEditMode)
+            {
+                <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
+            }
+        </PageHeader>
 
-    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
-        <div class="form-grid">
-            <label>
-                <span>保单名称</span>
-                <InputText @bind-Value="_model.PolicyName" />
-            </label>
-            <label>
-                <span>保险公司</span>
-                <InputText @bind-Value="_model.ProviderName" />
-            </label>
-            <label>
-                <span>保障类别</span>
-                <InputSelect @bind-Value="_model.InsuranceCategory">
-                    @foreach (var value in Enum.GetValues<InsuranceCategory>())
-                    {
-                        <option value="@value">@value</option>
-                    }
-                </InputSelect>
-            </label>
-            <label>
-                <span>状态</span>
-                <InputSelect @bind-Value="_model.Status">
-                    @foreach (var value in Enum.GetValues<InsuranceStatus>())
-                    {
-                        <option value="@value">@value</option>
-                    }
-                </InputSelect>
-            </label>
-            <label>
-                <span>生效日期</span>
-                <InputDate @bind-Value="_model.EffectiveDate" />
-            </label>
-            <label>
-                <span>到期日期</span>
-                <InputDate @bind-Value="_model.ExpiryDate" />
-            </label>
-            <label>
-                <span>联系人</span>
-                <InputText @bind-Value="_model.ContactName" />
-            </label>
-            <label>
-                <span>联系电话</span>
-                <InputText @bind-Value="_model.ContactPhone" />
-            </label>
-            <label class="form-grid-span-2">
-                <span>摘要</span>
-                <InputTextArea @bind-Value="_model.Summary" />
-            </label>
-        </div>
+        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <div class="form-grid">
+                <label>
+                    <span>保单名称</span>
+                    <InputText @bind-Value="_model.PolicyName" />
+                </label>
+                <label>
+                    <span>保险公司</span>
+                    <InputText @bind-Value="_model.ProviderName" />
+                </label>
+                <label>
+                    <span>保障类别</span>
+                    <InputSelect @bind-Value="_model.InsuranceCategory">
+                        @foreach (var value in Enum.GetValues<InsuranceCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label>
+                    <span>状态</span>
+                    <InputSelect @bind-Value="_model.Status">
+                        @foreach (var value in Enum.GetValues<InsuranceStatus>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label>
+                    <span>生效日期</span>
+                    <InputDate @bind-Value="_model.EffectiveDate" />
+                </label>
+                <label>
+                    <span>到期日期</span>
+                    <InputDate @bind-Value="_model.ExpiryDate" />
+                </label>
+                <label>
+                    <span>联系人</span>
+                    <InputText @bind-Value="_model.ContactName" />
+                </label>
+                <label>
+                    <span>联系电话</span>
+                    <InputText @bind-Value="_model.ContactPhone" />
+                </label>
+                <label class="form-grid-span-2">
+                    <span>摘要</span>
+                    <InputTextArea @bind-Value="_model.Summary" />
+                </label>
+            </div>
 
-        <div class="page-actions">
-            <a class="button-secondary" href="/documents/insurance">取消</a>
-            <button class="button-primary" type="submit">保存</button>
-        </div>
-    </EditForm>
-</section>
+            <div class="page-actions">
+                <a class="button-secondary" href="@BackHref">取消</a>
+                <button class="button-primary" type="submit">保存</button>
+            </div>
+        </EditForm>
+    </section>
+}
 
 @code {
     [Parameter]
     public Guid? Id { get; set; }
 
     private InsuranceRecord _model = new();
+    private bool _isMissingRecord;
 
     private bool IsEditMode => Id.HasValue;
+    private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.InsuranceEdit(id)) : AppRoutes.InsuranceList;
 
     protected override async Task OnParametersSetAsync()
     {
+        _isMissingRecord = false;
+
         if (Id is Guid id)
         {
-            _model = await DocumentCatalogService.GetInsuranceRecordAsync(id) ?? DocumentCatalogService.CreateInsuranceTemplate();
+            var existing = await DocumentCatalogService.GetInsuranceRecordAsync(id);
+            if (existing is null)
+            {
+                _isMissingRecord = true;
+                _model = DocumentCatalogService.CreateInsuranceTemplate();
+                return;
+            }
+
+            _model = existing;
         }
         else
         {
@@ -93,6 +116,23 @@
     private async Task HandleSubmitAsync()
     {
         await DocumentCatalogService.SaveInsuranceRecordAsync(_model);
-        NavigationManager.NavigateTo($"/documents/insurance/{_model.Id}");
+        NavigationManager.NavigateTo(AppRoutes.InsuranceDetail(_model.Id));
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (!IsEditMode)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"确认删除“{_model.PolicyName}”吗？删除后会从列表、首页摘要和搜索结果中移除。");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await DocumentCatalogService.DeleteInsuranceRecordAsync(_model.Id);
+        NavigationManager.NavigateTo(AppRoutes.InsuranceList);
     }
 }

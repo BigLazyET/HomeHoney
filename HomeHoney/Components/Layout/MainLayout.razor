@@ -16,7 +16,7 @@
     </header>
 
     <main class="app-main">
-        <article class="app-content">
+        <article class="app-content @(IsNestedRoute ? "app-content-nested" : string.Empty)">
             @Body
         </article>
     </main>
@@ -35,6 +35,20 @@
     }
 
     private bool IsWelcomeRoute => NavigationManager.ToBaseRelativePath(NavigationManager.Uri).StartsWith("welcome", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsNestedRoute
+    {
+        get
+        {
+            var route = AppRoutes.NormalizeRoute(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+            return route is not AppRoutes.Home and
+                   not AppRoutes.Documents and
+                   not AppRoutes.FridgeNotes and
+                   not AppRoutes.Reminders and
+                   not AppRoutes.Settings and
+                   not AppRoutes.Welcome;
+        }
+    }
 
     private string ThemeClass => UserPreferenceService.GetPreferences().ThemeMode switch
     {

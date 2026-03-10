@@ -2,74 +2,97 @@
 @page "/documents/manuals/{Id:guid}/edit"
 @inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 
-<section class="content-page form-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">说明书录入</span>
-            <h1>@(IsEditMode ? "编辑说明书" : "新增说明书")</h1>
-            <p>录入设备、品牌、型号、所属空间与保修日期，后续即可在提醒中心中统一查看。</p>
-        </div>
-    </div>
+@if (_isMissingRecord)
+{
+    <EmptyState Icon="📘" Title="未找到说明书" Description="这份说明书可能已被删除，返回列表后可以重新选择或新建一条资料。" />
+}
+else
+{
+    <section class="content-page form-page">
+        <PageHeader Eyebrow="说明书录入"
+                    Title="@(IsEditMode ? "编辑说明书" : "新增说明书")"
+                    Description="录入设备、品牌、型号、所属空间与保修日期，后续即可在提醒中心中统一查看。"
+                    BackHref="@BackHref"
+                    BackText="@(IsEditMode ? "返回说明书详情" : "返回说明书列表")">
+            @if (IsEditMode)
+            {
+                <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
+            }
+        </PageHeader>
 
-    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
-        <div class="form-grid">
-            <label>
-                <span>设备名称</span>
-                <InputText @bind-Value="_model.DeviceName" />
-            </label>
-            <label>
-                <span>品牌</span>
-                <InputText @bind-Value="_model.Brand" />
-            </label>
-            <label>
-                <span>型号</span>
-                <InputText @bind-Value="_model.Model" />
-            </label>
-            <label>
-                <span>说明书类别</span>
-                <InputSelect @bind-Value="_model.ManualCategory">
-                    @foreach (var value in Enum.GetValues<ManualCategory>())
-                    {
-                        <option value="@value">@value</option>
-                    }
-                </InputSelect>
-            </label>
-            <label>
-                <span>购买日期</span>
-                <InputDate @bind-Value="_model.PurchaseDate" />
-            </label>
-            <label>
-                <span>保修截止</span>
-                <InputDate @bind-Value="_model.WarrantyExpiryDate" />
-            </label>
-            <label class="form-grid-span-2">
-                <span>摘要</span>
-                <InputTextArea @bind-Value="_model.Summary" />
-            </label>
-        </div>
+        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <div class="form-grid">
+                <label>
+                    <span>设备名称</span>
+                    <InputText @bind-Value="_model.DeviceName" />
+                </label>
+                <label>
+                    <span>品牌</span>
+                    <InputText @bind-Value="_model.Brand" />
+                </label>
+                <label>
+                    <span>型号</span>
+                    <InputText @bind-Value="_model.Model" />
+                </label>
+                <label>
+                    <span>说明书类别</span>
+                    <InputSelect @bind-Value="_model.ManualCategory">
+                        @foreach (var value in Enum.GetValues<ManualCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label>
+                    <span>购买日期</span>
+                    <InputDate @bind-Value="_model.PurchaseDate" />
+                </label>
+                <label>
+                    <span>保修截止</span>
+                    <InputDate @bind-Value="_model.WarrantyExpiryDate" />
+                </label>
+                <label class="form-grid-span-2">
+                    <span>摘要</span>
+                    <InputTextArea @bind-Value="_model.Summary" />
+                </label>
+            </div>
 
-        <div class="page-actions">
-            <a class="button-secondary" href="/documents/manuals">取消</a>
-            <button class="button-primary" type="submit">保存</button>
-        </div>
-    </EditForm>
-</section>
+            <div class="page-actions">
+                <a class="button-secondary" href="@BackHref">取消</a>
+                <button class="button-primary" type="submit">保存</button>
+            </div>
+        </EditForm>
+    </section>
+}
 
 @code {
     [Parameter]
     public Guid? Id { get; set; }
 
     private ManualRecord _model = new();
+    private bool _isMissingRecord;
 
     private bool IsEditMode => Id.HasValue;
+    private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.ManualEdit(id)) : AppRoutes.ManualsList;
 
     protected override async Task OnParametersSetAsync()
     {
+        _isMissingRecord = false;
+
         if (Id is Guid id)
         {
-            _model = await DocumentCatalogService.GetManualRecordAsync(id) ?? DocumentCatalogService.CreateManualTemplate();
+            var existing = await DocumentCatalogService.GetManualRecordAsync(id);
+            if (existing is null)
+            {
+                _isMissingRecord = true;
+                _model = DocumentCatalogService.CreateManualTemplate();
+                return;
+            }
+
+            _model = existing;
         }
         else
         {
@@ -80,6 +103,23 @@
     private async Task HandleSubmitAsync()
     {
         await DocumentCatalogService.SaveManualRecordAsync(_model);
-        NavigationManager.NavigateTo($"/documents/manuals/{_model.Id}");
+        NavigationManager.NavigateTo(AppRoutes.ManualDetail(_model.Id));
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (!IsEditMode)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"确认删除“{_model.DeviceName}”吗？删除后会从列表、首页摘要和搜索结果中移除。");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await DocumentCatalogService.DeleteManualRecordAsync(_model.Id);
+        NavigationManager.NavigateTo(AppRoutes.ManualsList);
     }
 }

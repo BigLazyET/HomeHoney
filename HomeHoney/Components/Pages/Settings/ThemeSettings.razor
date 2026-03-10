@@ -3,9 +3,12 @@
 @using HomeHoney.Models
 
 <section class="content-page">
-    <span class="page-eyebrow">外观</span>
-    <h1>主题模式</h1>
-    <p>支持浅色、深色和跟随系统三种模式，修改后当前会话立即生效。</p>
+    <PageHeader Eyebrow="外观"
+                Title="主题模式"
+                Description="支持浅色、深色和跟随系统三种模式，修改后当前会话立即生效。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsTheme)"
+                BackText="返回设置">
+    </PageHeader>
 
     <div class="choice-list">
         @foreach (var mode in Enum.GetValues<ThemeMode>())

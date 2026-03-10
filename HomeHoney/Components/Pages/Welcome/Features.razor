@@ -2,8 +2,13 @@
 @using HomeHoney.Services.Navigation
 
 <section class="content-page">
-    <span class="page-eyebrow">核心模块</span>
-    <h1>一个应用，管理整个家庭的信息流</h1>
+    <PageHeader Eyebrow="核心模块"
+                Title="一个应用，管理整个家庭的信息流"
+                Description="从资料、协作、提醒到设置，先快速熟悉每个模块在家庭生活中的角色。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.WelcomeFeatures)"
+                BackText="返回欢迎页">
+    </PageHeader>
+
     <div class="feature-stack">
         <article class="feature-card">
             <h2>资料</h2>
@@ -24,7 +29,7 @@
     </div>
 
     <div class="page-actions">
-        <a class="button-secondary" href="@AppRoutes.Welcome">返回欢迎页</a>
+        <a class="button-secondary" href="@AppRoutes.GetParentRoute(AppRoutes.WelcomeFeatures)">返回欢迎页</a>
         <a class="button-primary" href="@AppRoutes.WelcomeGetStarted">进入首页前再看一步</a>
     </div>
 </section>

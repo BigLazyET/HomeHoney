@@ -4,14 +4,13 @@
 @using HomeHoney.Components.Shared
 
 <section class="content-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">说明书</span>
-            <h1>说明书列表</h1>
-            <p>按空间、设备或品牌整理说明书，临时查找时更快定位到正确资料。</p>
-        </div>
-        <a class="button-primary" href="/documents/manuals/new">新增说明书</a>
-    </div>
+    <PageHeader Eyebrow="说明书"
+                Title="说明书列表"
+                Description="按空间、设备或品牌整理说明书，临时查找时更快定位到正确资料。"
+                BackHref="@AppRoutes.Documents"
+                BackText="返回资料模块">
+        <a class="button-primary" href="@AppRoutes.ManualNew">新增说明书</a>
+    </PageHeader>
 
     <FilterBar SearchPlaceholder="搜索设备名称、品牌、标签"
                Filters="_filters" />
@@ -30,7 +29,7 @@
                               Subtitle="@($"{record.Brand} · {record.Model}")"
                               Description="@record.Summary"
                               Badge="@record.ManualCategory.ToString()"
-                              Href="@($"/documents/manuals/{record.Id}")"
+                              Href="@AppRoutes.ManualDetail(record.Id)"
                               Tags="@record.Tags"
                               MetaItems="@GetMeta(record)" />
             }

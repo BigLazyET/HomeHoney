@@ -76,7 +76,7 @@ public sealed class ReminderCenterService
                     _ => ReminderPriority.Low,
                 },
                 Status = ReminderStatus.Pending,
-                Href = AppRoutes.FridgeNotes,
+                Href = AppRoutes.FridgeNoteEdit(note.Id),
             })
             .Where(item => item.DueAt <= threshold));
 

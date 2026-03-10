@@ -20,16 +20,11 @@ public sealed class UserPreferenceService
 
     public bool IsOnboardingCompleted => _preferences.OnboardingCompleted;
 
+    public bool ShouldShowOnboardingOnStartup() => !_preferences.OnboardingCompleted;
+
     public Task CompleteOnboardingAsync()
     {
         _preferences.OnboardingCompleted = true;
-        NotifyStateChanged();
-        return Task.CompletedTask;
-    }
-
-    public Task ReopenOnboardingAsync()
-    {
-        _preferences.OnboardingCompleted = false;
         NotifyStateChanged();
         return Task.CompletedTask;
     }

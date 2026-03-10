@@ -3,9 +3,13 @@
 @using HomeHoney.Models
 
 <section class="content-page">
-    <span class="page-eyebrow">隐私与安全</span>
-    <h1>敏感信息显示策略</h1>
-    <p>在家庭共用设备场景下，你可以控制详情页展示的敏感程度，并决定是否重新进入欢迎帮助流程。</p>
+    <PageHeader Eyebrow="隐私与安全"
+                Title="敏感信息显示策略"
+                Description="在家庭共用设备场景下，你可以控制详情页展示的敏感程度，并决定是否重新浏览欢迎帮助流程。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsPrivacy)"
+                BackText="返回设置">
+        <a class="button-secondary" href="@AppRoutes.WelcomePreview">再次查看引导</a>
+    </PageHeader>
 
     <div class="choice-list">
         @foreach (var mode in Enum.GetValues<PrivacyMode>())
@@ -17,17 +21,12 @@
         }
     </div>
 
-    <div class="page-actions">
-        <button class="button-secondary" @onclick="ReopenOnboardingAsync">重新打开欢迎引导</button>
-    </div>
 </section>
 
 @code {
     private UserPreference Preferences => UserPreferenceService.GetPreferences();
 
     private Task SetPrivacyAsync(PrivacyMode mode) => UserPreferenceService.SetPrivacyModeAsync(mode);
-
-    private Task ReopenOnboardingAsync() => UserPreferenceService.ReopenOnboardingAsync();
 
     private static string GetLabel(PrivacyMode mode) => mode switch
     {

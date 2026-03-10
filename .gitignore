@@ -55,6 +55,7 @@ nunit-*.xml
 
 # IDE
 .vs/
+.vscode/
 .vscode/settings.json
 .idea/
 *.user

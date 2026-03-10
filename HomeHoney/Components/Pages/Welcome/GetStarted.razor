@@ -4,8 +4,13 @@
 @inject NavigationManager NavigationManager
 
 <section class="content-page">
-    <span class="page-eyebrow">开始使用</span>
-    <h1>推荐从这三步开始</h1>
+    <PageHeader Eyebrow="开始使用"
+                Title="推荐从这三步开始"
+                Description="完成首次引导后，下次打开应用会直接进入首页；后续仍可从设置中主动回看。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.WelcomeGetStarted)"
+                BackText="返回上一页">
+    </PageHeader>
+
     <ol class="step-list">
         <li>先进入 <strong>资料</strong> 模块，把保险和说明书整理成可搜索的记录。</li>
         <li>把家人会频繁查看的短事项放到 <strong>冰箱贴</strong>。</li>
@@ -20,12 +25,14 @@
     </div>
 
     <div class="page-actions">
-        <button class="button-primary" @onclick="CompleteAsync">完成引导，进入首页</button>
-        <a class="button-secondary" href="@AppRoutes.WelcomeFeatures">返回上一页</a>
+        <button class="button-primary" @onclick="CompleteAsync">@PrimaryActionText</button>
+        <a class="button-secondary" href="@AppRoutes.GetParentRoute(AppRoutes.WelcomeGetStarted)">返回上一页</a>
     </div>
 </section>
 
 @code {
+    private string PrimaryActionText => UserPreferenceService.IsOnboardingCompleted ? "结束回看，进入首页" : "完成引导，进入首页";
+
     private async Task CompleteAsync()
     {
         await UserPreferenceService.CompleteOnboardingAsync();

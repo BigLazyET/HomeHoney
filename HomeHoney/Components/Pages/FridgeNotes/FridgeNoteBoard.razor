@@ -9,19 +9,19 @@
             <h1>快速提醒、购物和留言</h1>
             <p>适合记录高频、短文本、希望第一眼就看到的家庭事项。</p>
         </div>
-        <a class="button-primary" href="/fridge-notes/new">新增冰箱贴</a>
+        <a class="button-primary" href="@AppRoutes.FridgeNoteNew">新增冰箱贴</a>
     </div>
 
     @if (_notes.Count == 0)
     {
-        <EmptyState Icon="🧲" Title="还没有冰箱贴" Description="写下一条购物事项、接送提醒或家庭留言，让首页也能快速看到。" />
+        <EmptyState Icon="🧲" Title="还没有冰箱贴" Description="删除旧内容后，可以继续写下购物事项、接送提醒或家庭留言，让首页也能快速看到。" />
     }
     else
     {
         <div class="sticky-board">
             @foreach (var note in _notes)
             {
-                <a class="sticky-note sticky-note-@note.ColorStyle" href="@($"/fridge-notes/{note.Id}/edit")">
+                <a class="sticky-note sticky-note-@note.ColorStyle" href="@AppRoutes.FridgeNoteEdit(note.Id)">
                     <div class="sticky-note-top">
                         <span>@note.Category</span>
                         <span>@GetPriority(note.Priority)</span>

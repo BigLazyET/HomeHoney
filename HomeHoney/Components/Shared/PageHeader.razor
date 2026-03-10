@@ -1,0 +1,55 @@
+<div class="page-header">
+    <div class="page-header-main">
+        @if (ShowBackButton && !string.IsNullOrWhiteSpace(BackHref))
+        {
+            <a class="page-back-link" href="@BackHref">
+                <span aria-hidden="true">←</span>
+                <span>@BackText</span>
+            </a>
+        }
+
+        <div>
+            @if (!string.IsNullOrWhiteSpace(Eyebrow))
+            {
+                <span class="page-eyebrow">@Eyebrow</span>
+            }
+
+            <h1>@Title</h1>
+
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p>@Description</p>
+            }
+        </div>
+    </div>
+
+    @if (ChildContent is not null)
+    {
+        <div class="page-actions-inline page-header-actions">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string? BackHref { get; set; }
+
+    [Parameter]
+    public string BackText { get; set; } = "返回上一级";
+
+    [Parameter]
+    public bool ShowBackButton { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

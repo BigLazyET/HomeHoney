@@ -18,10 +18,10 @@
 @code {
     private Task HandleNavigationAsync(NavigationContext context)
     {
-        var targetPath = $"/{context.Path.Trim('/')}";
-        var isWelcomeRoute = targetPath.StartsWith(AppRoutes.Welcome, StringComparison.OrdinalIgnoreCase);
+        var targetPath = AppRoutes.NormalizeRoute($"/{context.Path.Trim('/')}");
+        var isWelcomeRoute = AppRoutes.IsWelcomeRoute(targetPath);
 
-        if (!UserPreferenceService.IsOnboardingCompleted && !isWelcomeRoute)
+        if (UserPreferenceService.ShouldShowOnboardingOnStartup() && !isWelcomeRoute)
         {
             NavigationManager.NavigateTo(AppRoutes.Welcome);
         }

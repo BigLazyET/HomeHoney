@@ -63,17 +63,24 @@
                             <a href="@AppRoutes.Documents">进入资料模块</a>
                         </div>
 
-                        <div class="card-stack">
-                            @foreach (var document in _recentDocuments)
-                            {
-                                <DocumentCard Title="@document.Title"
-                                              Category="@document.Category"
-                                              Description="@document.Summary"
-                                              Href="@document.Href"
-                                              Tags="@document.Tags"
-                                              MetaItems="@GetDocumentMeta(document)" />
-                            }
-                        </div>
+                        @if (_recentDocuments.Count == 0)
+                        {
+                            <EmptyState Icon="🗂️" Title="最近资料暂时为空" Description="删除旧资料后，这里会在你新增或更新保险、说明书时自动刷新。" />
+                        }
+                        else
+                        {
+                            <div class="card-stack">
+                                @foreach (var document in _recentDocuments)
+                                {
+                                    <DocumentCard Title="@document.Title"
+                                                  Category="@document.Category"
+                                                  Description="@document.Summary"
+                                                  Href="@document.Href"
+                                                  Tags="@document.Tags"
+                                                  MetaItems="@GetDocumentMeta(document)" />
+                                }
+                            </div>
+                        }
                     </section>
                     break;
                 case HomeModuleType.FamilyMessages:
@@ -83,15 +90,22 @@
                             <a href="@AppRoutes.FridgeNotes">查看冰箱贴</a>
                         </div>
 
-                        <div class="summary-chip-list">
-                            @foreach (var item in _collaborationSummaries)
-                            {
-                                <a class="summary-chip" href="@item.Href">
-                                    <strong>@item.Title</strong>
-                                    <span>@item.Summary</span>
-                                </a>
-                            }
-                        </div>
+                        @if (_collaborationSummaries.Count == 0)
+                        {
+                            <EmptyState Icon="💬" Title="还没有家庭留言" Description="删除旧冰箱贴后，可以随时新增购物、提醒或留言内容。" />
+                        }
+                        else
+                        {
+                            <div class="summary-chip-list">
+                                @foreach (var item in _collaborationSummaries)
+                                {
+                                    <a class="summary-chip" href="@item.Href">
+                                        <strong>@item.Title</strong>
+                                        <span>@item.Summary</span>
+                                    </a>
+                                }
+                            </div>
+                        }
                     </section>
                     break;
                 case HomeModuleType.RecommendedActions:

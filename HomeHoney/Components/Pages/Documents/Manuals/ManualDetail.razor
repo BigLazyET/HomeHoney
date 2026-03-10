@@ -1,5 +1,7 @@
 @page "/documents/manuals/{Id:guid}"
 @inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 
 @if (_record is null)
@@ -9,17 +11,14 @@
 else
 {
     <section class="content-page detail-page">
-        <div class="section-heading">
-            <div>
-                <span class="page-eyebrow">说明书详情</span>
-                <h1>@_record.DeviceName</h1>
-                <p>@_record.Summary</p>
-            </div>
-            <div class="page-actions-inline">
-                <a class="button-secondary" href="/documents/manuals">返回列表</a>
-                <a class="button-primary" href="@($"/documents/manuals/{_record.Id}/edit")">编辑资料</a>
-            </div>
-        </div>
+        <PageHeader Eyebrow="说明书详情"
+                    Title="@_record.DeviceName"
+                    Description="@_record.Summary"
+                    BackHref="@AppRoutes.GetParentRoute(AppRoutes.ManualDetail(Id))"
+                    BackText="返回说明书列表">
+            <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
+            <a class="button-primary" href="@AppRoutes.ManualEdit(_record.Id)">编辑资料</a>
+        </PageHeader>
 
         <div class="detail-grid">
             <article class="detail-card">
@@ -54,5 +53,22 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _record = await DocumentCatalogService.GetManualRecordAsync(Id);
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (_record is null)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"确认删除“{_record.DeviceName}”吗？删除后会从列表、首页摘要和搜索结果中移除。");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await DocumentCatalogService.DeleteManualRecordAsync(_record.Id);
+        NavigationManager.NavigateTo(AppRoutes.ManualsList);
     }
 }

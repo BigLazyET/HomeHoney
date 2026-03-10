@@ -96,6 +96,18 @@ public sealed class FamilyCollaborationService
         return Task.CompletedTask;
     }
 
+    public Task<bool> DeleteFridgeNoteAsync(Guid id)
+    {
+        var existing = _fridgeNotes.FirstOrDefault(item => item.Id == id);
+        if (existing is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        _fridgeNotes.Remove(existing);
+        return Task.FromResult(true);
+    }
+
     public FridgeNote CreateFridgeNoteTemplate() => new() { DueAt = DateTime.Today.AddDays(1).AddHours(18) };
 
     public Memo CreateMemoTemplate() => new() { DueAt = DateTime.Today.AddDays(7).AddHours(9) };
@@ -126,7 +138,7 @@ public sealed class FamilyCollaborationService
 
     public IEnumerable<CollaborationSummary> GetRecentMessages(int maxItems = 3)
     {
-        var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, note.Title, note.Content, AppRoutes.FridgeNotes, note.Priority.ToString(), note.DueAt));
+        var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, note.Title, note.Content, AppRoutes.FridgeNoteEdit(note.Id), note.Priority.ToString(), note.DueAt));
         var memos = _memos.Select(memo => new CollaborationSummary(memo.Id, memo.Title, memo.Content, AppRoutes.MemoDetail(memo.Id), memo.Importance.ToString(), memo.DueAt));
         return fridge.Concat(memos).OrderBy(item => item.DueAt ?? DateTime.MaxValue).Take(maxItems).ToList();
     }

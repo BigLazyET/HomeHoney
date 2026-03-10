@@ -3,9 +3,12 @@
 @using HomeHoney.Models
 
 <section class="content-page">
-    <span class="page-eyebrow">首页布局</span>
-    <h1>首页模块顺序与可见性</h1>
-    <p>决定首页先展示哪些摘要模块，优先把你最常查看的内容放在前面。</p>
+    <PageHeader Eyebrow="首页布局"
+                Title="首页模块顺序与可见性"
+                Description="决定首页先展示哪些摘要模块，优先把你最常查看的内容放在前面。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsHomeLayout)"
+                BackText="返回设置">
+    </PageHeader>
 
     <div class="choice-list">
         @foreach (var moduleType in Preferences.HomeModuleOrder)

@@ -2,65 +2,76 @@
 @page "/fridge-notes/{Id:guid}/edit"
 @inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 
-<section class="content-page form-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">冰箱贴编辑</span>
-            <h1>@(IsEditMode ? "编辑冰箱贴" : "新增冰箱贴")</h1>
-            <p>适合购物、提醒、家庭留言等短内容，保存后会出现在首页摘要或提醒中心中。</p>
-        </div>
-    </div>
+@if (_isMissingNote)
+{
+    <EmptyState Icon="🧲" Title="未找到冰箱贴" Description="这条冰箱贴可能已被删除，返回冰箱贴主页面后可以重新选择或新建一条内容。" />
+}
+else
+{
+    <section class="content-page form-page">
+        <PageHeader Eyebrow="冰箱贴编辑"
+                    Title="@(IsEditMode ? "编辑冰箱贴" : "新增冰箱贴")"
+                    Description="适合购物、提醒、家庭留言等短内容，保存后会出现在首页摘要或提醒中心中。"
+                    BackHref="@BackHref"
+                    BackText="返回冰箱贴主页面">
+            @if (IsEditMode)
+            {
+                <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除冰箱贴</button>
+            }
+        </PageHeader>
 
-    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
-        <div class="form-grid">
-            <label>
-                <span>标题</span>
-                <InputText @bind-Value="_model.Title" />
-            </label>
-            <label>
-                <span>分类</span>
-                <InputSelect @bind-Value="_model.Category">
-                    @foreach (var value in Enum.GetValues<FridgeNoteCategory>())
-                    {
-                        <option value="@value">@value</option>
-                    }
-                </InputSelect>
-            </label>
-            <label>
-                <span>优先级</span>
-                <InputSelect @bind-Value="_model.Priority">
-                    @foreach (var value in Enum.GetValues<NotePriority>())
-                    {
-                        <option value="@value">@value</option>
-                    }
-                </InputSelect>
-            </label>
-            <label>
-                <span>到期时间</span>
-                <InputDate @bind-Value="_dueDate" />
-            </label>
-            <label class="checkbox-row">
-                <InputCheckbox @bind-Value="_model.IsPinned" />
-                <span>置顶显示</span>
-            </label>
-            <label class="checkbox-row">
-                <InputCheckbox @bind-Value="_model.IsCompleted" />
-                <span>标记为已完成</span>
-            </label>
-            <label class="form-grid-span-2">
-                <span>内容</span>
-                <InputTextArea @bind-Value="_model.Content" />
-            </label>
-        </div>
+        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <div class="form-grid">
+                <label>
+                    <span>标题</span>
+                    <InputText @bind-Value="_model.Title" />
+                </label>
+                <label>
+                    <span>分类</span>
+                    <InputSelect @bind-Value="_model.Category">
+                        @foreach (var value in Enum.GetValues<FridgeNoteCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label>
+                    <span>优先级</span>
+                    <InputSelect @bind-Value="_model.Priority">
+                        @foreach (var value in Enum.GetValues<NotePriority>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label>
+                    <span>到期时间</span>
+                    <InputDate @bind-Value="_dueDate" />
+                </label>
+                <label class="checkbox-row">
+                    <InputCheckbox @bind-Value="_model.IsPinned" />
+                    <span>置顶显示</span>
+                </label>
+                <label class="checkbox-row">
+                    <InputCheckbox @bind-Value="_model.IsCompleted" />
+                    <span>标记为已完成</span>
+                </label>
+                <label class="form-grid-span-2">
+                    <span>内容</span>
+                    <InputTextArea @bind-Value="_model.Content" />
+                </label>
+            </div>
 
-        <div class="page-actions">
-            <a class="button-secondary" href="/fridge-notes">取消</a>
-            <button class="button-primary" type="submit">保存</button>
-        </div>
-    </EditForm>
-</section>
+            <div class="page-actions">
+                <a class="button-secondary" href="@BackHref">取消</a>
+                <button class="button-primary" type="submit">保存</button>
+            </div>
+        </EditForm>
+    </section>
+}
 
 @code {
     [Parameter]
@@ -68,14 +79,26 @@
 
     private FridgeNote _model = new();
     private DateTime _dueDate = DateTime.Today.AddDays(1);
+    private bool _isMissingNote;
 
     private bool IsEditMode => Id.HasValue;
+    private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.FridgeNoteEdit(id)) : AppRoutes.FridgeNotes;
 
     protected override async Task OnParametersSetAsync()
     {
+        _isMissingNote = false;
+
         if (Id is Guid id)
         {
-            _model = await FamilyCollaborationService.GetFridgeNoteAsync(id) ?? FamilyCollaborationService.CreateFridgeNoteTemplate();
+            var existing = await FamilyCollaborationService.GetFridgeNoteAsync(id);
+            if (existing is null)
+            {
+                _isMissingNote = true;
+                _model = FamilyCollaborationService.CreateFridgeNoteTemplate();
+                return;
+            }
+
+            _model = existing;
         }
         else
         {
@@ -89,6 +112,23 @@
     {
         _model.DueAt = _dueDate;
         await FamilyCollaborationService.SaveFridgeNoteAsync(_model);
-        NavigationManager.NavigateTo("/fridge-notes");
+        NavigationManager.NavigateTo(AppRoutes.FridgeNotes);
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (!IsEditMode)
+        {
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"确认删除“{_model.Title}”吗？删除后会从冰箱贴主页面、首页摘要和提醒中移除。");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await FamilyCollaborationService.DeleteFridgeNoteAsync(_model.Id);
+        NavigationManager.NavigateTo(AppRoutes.FridgeNotes);
     }
 }

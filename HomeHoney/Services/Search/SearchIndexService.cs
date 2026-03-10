@@ -35,7 +35,7 @@ public sealed class SearchIndexService
 
         var fridgeNotes = (await _familyCollaborationService.GetFridgeNotesAsync())
             .Where(note => Contains(note.Title, term) || Contains(note.Content, term))
-            .Select(note => new SearchResultItem(note.Title, note.Content, "冰箱贴", AppRoutes.FridgeNotes));
+            .Select(note => new SearchResultItem(note.Title, note.Content, "冰箱贴", AppRoutes.FridgeNoteEdit(note.Id)));
 
         var memos = (await _familyCollaborationService.GetMemosAsync())
             .Where(memo => Contains(memo.Title, term) || Contains(memo.Content, term))

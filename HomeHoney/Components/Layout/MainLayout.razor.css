@@ -43,6 +43,10 @@
     padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
 }
 
+.app-content-nested {
+    padding-top: 0.25rem;
+}
+
 .welcome-layout .app-header {
     padding-bottom: 0;
 }

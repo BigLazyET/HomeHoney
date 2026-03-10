@@ -141,6 +141,30 @@ public sealed class DocumentCatalogService
         return Task.CompletedTask;
     }
 
+    public Task<bool> DeleteInsuranceRecordAsync(Guid id)
+    {
+        var existing = _insuranceRecords.FirstOrDefault(item => item.Id == id);
+        if (existing is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        _insuranceRecords.Remove(existing);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteManualRecordAsync(Guid id)
+    {
+        var existing = _manualRecords.FirstOrDefault(item => item.Id == id);
+        if (existing is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        _manualRecords.Remove(existing);
+        return Task.FromResult(true);
+    }
+
     public InsuranceRecord CreateInsuranceTemplate() => new()
     {
         InsuredMemberId = _members[0].Id,

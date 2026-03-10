@@ -4,14 +4,13 @@
 @using HomeHoney.Components.Shared
 
 <section class="content-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">保险</span>
-            <h1>保险列表</h1>
-            <p>按状态、家庭成员和到期时间快速查看家庭保障现状。</p>
-        </div>
-        <a class="button-primary" href="/documents/insurance/new">新增保险</a>
-    </div>
+    <PageHeader Eyebrow="保险"
+                Title="保险列表"
+                Description="按状态、家庭成员和到期时间快速查看家庭保障现状。"
+                BackHref="@AppRoutes.Documents"
+                BackText="返回资料模块">
+        <a class="button-primary" href="@AppRoutes.InsuranceNew">新增保险</a>
+    </PageHeader>
 
     <FilterBar SearchPlaceholder="搜索保单名称、保障摘要、标签"
                Filters="_filters" />
@@ -30,7 +29,7 @@
                               Subtitle="@record.ProviderName"
                               Description="@record.Summary"
                               Badge="@GetStatusLabel(record.Status)"
-                              Href="@($"/documents/insurance/{record.Id}")"
+                              Href="@AppRoutes.InsuranceDetail(record.Id)"
                               Tags="@record.Tags"
                               MetaItems="@GetMeta(record)" />
             }
