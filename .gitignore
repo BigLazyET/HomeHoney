@@ -58,6 +58,7 @@ nunit-*.xml
 .vscode/
 .vscode/settings.json
 .idea/
+.dotnet/
 *.user
 *.suo
 *.userprefs
@@ -76,3 +77,4 @@ Thumbs.db
 *.ipa
 *.apk
 *.aab
+*.dSYM/

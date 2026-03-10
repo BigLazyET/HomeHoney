@@ -4,22 +4,26 @@
 
 ## 技术栈
 
-- **框架**: .NET 9 / MAUI Blazor Hybrid
-- **语言**: C# 12
+- **框架**: .NET 10 / MAUI Blazor Hybrid
+- **语言**: C# 14
 - **测试**: xUnit + bUnit + Moq
 - **目标平台**: iOS 16+、Android 13+ (API 33+)、macOS 15+ (可选)
 
 ## 前置条件
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) (9.0.100+)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (10.0.102+)
 - MAUI 工作负载：
 
   ```bash
-  dotnet workload install maui
+  dotnet workload restore
   ```
 
 - **iOS 开发**: macOS + Xcode 15+
 - **Android 开发**: Android SDK (API 33+)
+
+> 当前仓库在 .NET 10 平台构建验证中额外观察到：
+> - iOS / Mac Catalyst 使用当前 .NET 10 工具链时需要 **Xcode 26.2**
+> - Android 构建链路中的 manifest merger 需要 **Java 17+**（当前 Java 11 会失败）
 
 ## 快速开始
 
@@ -31,6 +35,9 @@ cd HomeHoney
 # 还原依赖
 dotnet restore
 
+# 恢复 MAUI 工作负载
+dotnet workload restore
+
 # 构建（所有平台）
 dotnet build
 
@@ -38,14 +45,29 @@ dotnet build
 dotnet test
 
 # macOS 运行
-dotnet build -f net9.0-maccatalyst -t:Run
+dotnet build -f net10.0-maccatalyst -t:Run
 
 # iOS 模拟器运行
-dotnet build -f net9.0-ios -t:Run -p:_DeviceName=:v2:udid=YOUR_SIMULATOR_UDID
+dotnet build -f net10.0-ios -t:Run -p:_DeviceName=:v2:udid=YOUR_SIMULATOR_UDID
 
 # Android 模拟器运行
-dotnet build -f net9.0-android -t:Run
+dotnet build -f net10.0-android -t:Run
 ```
+
+## 升级后验证链路
+
+建议按以下顺序验证当前仓库的 .NET 10 基线：
+
+1. `dotnet --version` 确认当前 SDK 已切换到 10.0.102+
+2. `dotnet workload restore` 恢复与 .NET 10 对应的 MAUI 工作负载
+3. `dotnet build HomeHoney.sln` 验证主应用与测试工程构建
+4. `dotnet test HomeHoney.Tests/HomeHoney.Tests.csproj` 验证现有回归测试
+5. 手动抽样首页、欢迎流、资料、冰箱贴、提醒与设置入口
+
+如果 `dotnet build HomeHoney.sln` 在 iOS / Mac Catalyst 或 Android 上失败，先确认是否满足以下平台工具前提：
+
+- Xcode 已升级到 26.2 或更高
+- `java -version` 输出为 17 或更高
 
 ## 项目结构
 
@@ -104,8 +126,9 @@ HomeHoney.Tests/             # 测试项目
 
 ## 验证状态
 
-- 解决方案构建：`dotnet build HomeHoney.sln` ✅
-- 测试项目：`dotnet test HomeHoney.Tests/HomeHoney.Tests.csproj` ✅
+- 升级目标：`.NET 10` 基线
+- 推荐构建验证：`dotnet build HomeHoney.sln`
+- 推荐测试验证：`dotnet test HomeHoney.Tests/HomeHoney.Tests.csproj`
 
 ## 许可证
 

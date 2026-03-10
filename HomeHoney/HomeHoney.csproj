@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <TargetFrameworks>net9.0;net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks>net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
-        <OutputType Condition="'$(TargetFramework)' != 'net9.0'">Exe</OutputType>
+        <OutputType Condition="'$(TargetFramework)' != 'net10.0'">Exe</OutputType>
         <RootNamespace>HomeHoney</RootNamespace>
-        <UseMaui Condition="'$(TargetFramework)' != 'net9.0'">true</UseMaui>
+        <UseMaui Condition="'$(TargetFramework)' != 'net10.0'">true</UseMaui>
         <SingleProject>true</SingleProject>
         <ImplicitUsings>enable</ImplicitUsings>
         <EnableDefaultCssItems>false</EnableDefaultCssItems>
@@ -34,8 +34,8 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
-    <!-- Exclude MAUI-specific source files when building for plain net9.0 (bUnit test reference) -->
-    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <!-- Exclude MAUI-specific source files when building for plain net10.0 (bUnit test reference) -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
         <Compile Remove="Platforms\**" />
         <Compile Remove="App.xaml.cs" />
         <Compile Remove="MainPage.xaml.cs" />
@@ -46,7 +46,7 @@
         <None Include="MauiProgram.cs" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
+    <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 
@@ -64,17 +64,17 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
+    <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-        <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.*" />
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.*" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.*" />
     </ItemGroup>
 
 </Project>
