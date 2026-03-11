@@ -23,6 +23,7 @@ public static class AppRoutes
     public const string Search = "/search";
 
     public const string Settings = "/settings";
+    public const string SettingsStorage = "/settings/storage";
     public const string SettingsTheme = "/settings/theme";
     public const string SettingsNotifications = "/settings/notifications";
     public const string SettingsHomeLayout = "/settings/home-layout";
@@ -83,6 +84,7 @@ public static class AppRoutes
         }
 
         if (string.Equals(normalized, SettingsTheme, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, SettingsStorage, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(normalized, SettingsNotifications, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(normalized, SettingsHomeLayout, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(normalized, SettingsPrivacy, StringComparison.OrdinalIgnoreCase) ||

@@ -1,5 +1,6 @@
 using HomeHoney.Models;
 using HomeHoney.Services.Navigation;
+using HomeHoney.Services.Storage;
 
 namespace HomeHoney.Services.Documents;
 
@@ -9,22 +10,58 @@ public sealed class DocumentCatalogService
     private readonly List<ManualRecord> _manualRecords;
     private readonly List<HouseholdMember> _members;
     private readonly List<Space> _spaces;
+    private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
+    private readonly IDocumentMetadataRepository? _documentMetadataRepository;
+    private readonly IBusinessAggregateRepository? _businessAggregateRepository;
+    private readonly ILocalCacheStore? _localCacheStore;
+    private readonly DocumentFileOrchestrator? _documentFileOrchestrator;
 
     public DocumentCatalogService()
     {
-        _members =
+        _insuranceRecords = [];
+        _manualRecords = [];
+        _members = [];
+        _spaces = [];
+        SeedLocalData();
+    }
+
+    public DocumentCatalogService(
+        IStorageConnectionProfileService storageConnectionProfileService,
+        IDocumentMetadataRepository documentMetadataRepository,
+        IBusinessAggregateRepository businessAggregateRepository,
+        ILocalCacheStore localCacheStore,
+        DocumentFileOrchestrator documentFileOrchestrator)
+    {
+        _storageConnectionProfileService = storageConnectionProfileService;
+        _documentMetadataRepository = documentMetadataRepository;
+        _businessAggregateRepository = businessAggregateRepository;
+        _localCacheStore = localCacheStore;
+        _documentFileOrchestrator = documentFileOrchestrator;
+        _insuranceRecords = [];
+        _manualRecords = [];
+        _members = [];
+        _spaces = [];
+        SeedLocalData();
+    }
+
+    private void SeedLocalData()
+    {
+        _members.Clear();
+        _members.AddRange(
         [
             new() { Id = Guid.Parse("f4aab8d3-c8db-4f45-8f45-6e0eb50a1001"), DisplayName = "ET", Role = HouseholdRole.Self, AvatarColor = "#007aff", IsPrimary = true },
             new() { Id = Guid.Parse("f4aab8d3-c8db-4f45-8f45-6e0eb50a1002"), DisplayName = "妈妈", Role = HouseholdRole.Parent, AvatarColor = "#ff9500" },
-        ];
+        ]);
 
-        _spaces =
+        _spaces.Clear();
+        _spaces.AddRange(
         [
             new() { Id = Guid.Parse("6dbc1d83-67ab-4456-b62b-15f4c88c1001"), Name = "厨房", Icon = "🍳", SortOrder = 1 },
             new() { Id = Guid.Parse("6dbc1d83-67ab-4456-b62b-15f4c88c1002"), Name = "客厅", Icon = "🛋️", SortOrder = 2 },
-        ];
+        ]);
 
-        _insuranceRecords =
+        _insuranceRecords.Clear();
+        _insuranceRecords.AddRange(
         [
             new()
             {
@@ -39,7 +76,15 @@ public sealed class DocumentCatalogService
                 ContactName = "专属顾问 王女士",
                 ContactPhone = "400-800-0001",
                 Summary = "覆盖住院、门诊与意外医疗，适合作为家庭基础保障。",
-                AttachmentCount = 3,
+                AttachmentCount = 1,
+                PrimaryFile = new FileResource
+                {
+                    FileName = "family-medical-policy.pdf",
+                    ExternalPath = "seed/insurance/family-medical-policy.pdf",
+                    AvailabilityStatus = FileAvailabilityStatus.Available,
+                    ContentType = "application/pdf",
+                    SizeBytes = 512000,
+                },
                 Tags = ["医疗", "年度续保", "家庭"]
             },
             new()
@@ -55,12 +100,21 @@ public sealed class DocumentCatalogService
                 ContactName = "理赔热线",
                 ContactPhone = "95518",
                 Summary = "儿童日常意外、骨折与门急诊意外保障。",
-                AttachmentCount = 2,
+                AttachmentCount = 1,
+                PrimaryFile = new FileResource
+                {
+                    FileName = "kids-accident-policy.pdf",
+                    ExternalPath = "seed/insurance/kids-accident-policy.pdf",
+                    AvailabilityStatus = FileAvailabilityStatus.Available,
+                    ContentType = "application/pdf",
+                    SizeBytes = 384000,
+                },
                 Tags = ["儿童", "意外", "即将到期"]
             },
-        ];
+        ]);
 
-        _manualRecords =
+        _manualRecords.Clear();
+        _manualRecords.AddRange(
         [
             new()
             {
@@ -74,6 +128,14 @@ public sealed class DocumentCatalogService
                 WarrantyExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddYears(2)),
                 Summary = "冰箱说明书、保养建议与故障代码索引。",
                 AttachmentCount = 1,
+                PrimaryFile = new FileResource
+                {
+                    FileName = "haier-fridge-manual.pdf",
+                    ExternalPath = "seed/manuals/haier-fridge-manual.pdf",
+                    AvailabilityStatus = FileAvailabilityStatus.Available,
+                    ContentType = "application/pdf",
+                    SizeBytes = 256000,
+                },
                 Tags = ["厨房", "冰箱", "保修中"]
             },
             new()
@@ -87,82 +149,160 @@ public sealed class DocumentCatalogService
                 PurchaseDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-8)),
                 WarrantyExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(16)),
                 Summary = "滤芯更换周期、联网说明与常见故障处理。",
-                AttachmentCount = 2,
+                AttachmentCount = 1,
+                PrimaryFile = new FileResource
+                {
+                    FileName = "mijia-air-purifier-manual.pdf",
+                    ExternalPath = "seed/manuals/mijia-air-purifier-manual.pdf",
+                    AvailabilityStatus = FileAvailabilityStatus.Available,
+                    ContentType = "application/pdf",
+                    SizeBytes = 192000,
+                },
                 Tags = ["客厅", "净化器", "滤芯提醒"]
             },
-        ];
+        ]);
     }
 
     public IReadOnlyList<HouseholdMember> GetMembers() => _members;
 
     public IReadOnlyList<Space> GetSpaces() => _spaces;
 
-    public Task<IReadOnlyList<InsuranceRecord>> GetInsuranceRecordsAsync() => Task.FromResult<IReadOnlyList<InsuranceRecord>>(_insuranceRecords.OrderBy(record => record.ExpiryDate).ToList());
-
-    public Task<IReadOnlyList<ManualRecord>> GetManualRecordsAsync() => Task.FromResult<IReadOnlyList<ManualRecord>>(_manualRecords.OrderBy(record => record.SpaceId).ToList());
-
-    public Task<InsuranceRecord?> GetInsuranceRecordAsync(Guid id) => Task.FromResult(_insuranceRecords.FirstOrDefault(record => record.Id == id));
-
-    public Task<ManualRecord?> GetManualRecordAsync(Guid id) => Task.FromResult(_manualRecords.FirstOrDefault(record => record.Id == id));
-
-    public Task SaveInsuranceRecordAsync(InsuranceRecord record)
+    public async Task<IReadOnlyList<InsuranceRecord>> GetInsuranceRecordsAsync()
     {
-        record.LastUpdatedAt = DateTime.Now;
-        var existing = _insuranceRecords.FirstOrDefault(item => item.Id == record.Id);
-        if (existing is null)
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
-            record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
-            _insuranceRecords.Add(record);
-        }
-        else
-        {
-            var index = _insuranceRecords.IndexOf(existing);
-            _insuranceRecords[index] = record;
+            try
+            {
+                var remote = (await _documentMetadataRepository.GetInsuranceRecordsAsync()).OrderBy(record => record.ExpiryDate).ToList();
+                ReplaceLocal(_insuranceRecords, remote);
+                if (_localCacheStore is not null)
+                {
+                    await _localCacheStore.SetAsync("documents.insurance", remote);
+                }
+                await SyncReferenceDataAsync();
+                return remote;
+            }
+            catch
+            {
+                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<InsuranceRecord>>("documents.insurance");
+                if (cached is not null)
+                {
+                    ReplaceLocal(_insuranceRecords, cached);
+                    return cached;
+                }
+            }
         }
 
-        return Task.CompletedTask;
+        return _insuranceRecords.OrderBy(record => record.ExpiryDate).ToList();
     }
 
-    public Task SaveManualRecordAsync(ManualRecord record)
+    public async Task<IReadOnlyList<ManualRecord>> GetManualRecordsAsync()
     {
-        record.LastUpdatedAt = DateTime.Now;
-        var existing = _manualRecords.FirstOrDefault(item => item.Id == record.Id);
-        if (existing is null)
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
-            record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
-            _manualRecords.Add(record);
-        }
-        else
-        {
-            var index = _manualRecords.IndexOf(existing);
-            _manualRecords[index] = record;
+            try
+            {
+                var remote = (await _documentMetadataRepository.GetManualRecordsAsync()).OrderBy(record => record.SpaceId).ToList();
+                ReplaceLocal(_manualRecords, remote);
+                if (_localCacheStore is not null)
+                {
+                    await _localCacheStore.SetAsync("documents.manuals", remote);
+                }
+                await SyncReferenceDataAsync();
+                return remote;
+            }
+            catch
+            {
+                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<ManualRecord>>("documents.manuals");
+                if (cached is not null)
+                {
+                    ReplaceLocal(_manualRecords, cached);
+                    return cached;
+                }
+            }
         }
 
-        return Task.CompletedTask;
+        return _manualRecords.OrderBy(record => record.SpaceId).ToList();
     }
 
-    public Task<bool> DeleteInsuranceRecordAsync(Guid id)
+    public async Task<InsuranceRecord?> GetInsuranceRecordAsync(Guid id)
+        => (await GetInsuranceRecordsAsync()).FirstOrDefault(record => record.Id == id);
+
+    public async Task<ManualRecord?> GetManualRecordAsync(Guid id)
+        => (await GetManualRecordsAsync()).FirstOrDefault(record => record.Id == id);
+
+    public async Task SaveInsuranceRecordAsync(InsuranceRecord record)
+    {
+        record.LastUpdatedAt = DateTime.Now;
+        record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
+        UpsertLocal(_insuranceRecords, record, item => item.Id == record.Id);
+
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
+        {
+            await _documentMetadataRepository.SaveInsuranceRecordAsync(record);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("documents.insurance", _insuranceRecords);
+            }
+        }
+    }
+
+    public async Task SaveManualRecordAsync(ManualRecord record)
+    {
+        record.LastUpdatedAt = DateTime.Now;
+        record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
+        UpsertLocal(_manualRecords, record, item => item.Id == record.Id);
+
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
+        {
+            await _documentMetadataRepository.SaveManualRecordAsync(record);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("documents.manuals", _manualRecords);
+            }
+        }
+    }
+
+    public async Task<bool> DeleteInsuranceRecordAsync(Guid id)
     {
         var existing = _insuranceRecords.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         _insuranceRecords.Remove(existing);
-        return Task.FromResult(true);
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
+        {
+            await _documentMetadataRepository.DeleteInsuranceRecordAsync(id);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("documents.insurance", _insuranceRecords);
+            }
+        }
+
+        return true;
     }
 
-    public Task<bool> DeleteManualRecordAsync(Guid id)
+    public async Task<bool> DeleteManualRecordAsync(Guid id)
     {
         var existing = _manualRecords.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         _manualRecords.Remove(existing);
-        return Task.FromResult(true);
+        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
+        {
+            await _documentMetadataRepository.DeleteManualRecordAsync(id);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("documents.manuals", _manualRecords);
+            }
+        }
+
+        return true;
     }
 
     public InsuranceRecord CreateInsuranceTemplate() => new()
@@ -184,6 +324,105 @@ public sealed class DocumentCatalogService
         var insurance = _insuranceRecords.Select(record => new DocumentSummary(record.Id, record.PolicyName, "保险", record.Summary, AppRoutes.InsuranceDetail(record.Id), record.Tags, record.LastUpdatedAt));
         var manuals = _manualRecords.Select(record => new DocumentSummary(record.Id, record.DeviceName, "说明书", record.Summary, AppRoutes.ManualDetail(record.Id), record.Tags, record.LastUpdatedAt));
         return insurance.Concat(manuals).OrderByDescending(item => item.UpdatedAt).Take(maxItems).ToList();
+    }
+
+    public async Task<FileStorageResult> UploadInsuranceFileAsync(Guid id, Stream content, string fileName, string? contentType)
+    {
+        var record = await GetInsuranceRecordAsync(id);
+        if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
+        {
+            return new(false, "当前未启用远端文件服务，无法上传文件。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
+        }
+
+        var result = await _documentFileOrchestrator.UploadInsuranceFileAsync(record, content, fileName, contentType);
+        await SaveInsuranceRecordAsync(record);
+        return result;
+    }
+
+    public async Task<FileStorageResult> UploadManualFileAsync(Guid id, Stream content, string fileName, string? contentType)
+    {
+        var record = await GetManualRecordAsync(id);
+        if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
+        {
+            return new(false, "当前未启用远端文件服务，无法上传文件。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
+        }
+
+        var result = await _documentFileOrchestrator.UploadManualFileAsync(record, content, fileName, contentType);
+        await SaveManualRecordAsync(record);
+        return result;
+    }
+
+    public async Task<FileDownloadResult> DownloadInsuranceFileAsync(Guid id)
+    {
+        var record = await GetInsuranceRecordAsync(id);
+        if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
+        {
+            return new(false, "当前记录还没有可下载的附件。");
+        }
+
+        return await _documentFileOrchestrator.DownloadAsync(record.PrimaryFile);
+    }
+
+    public async Task<FileDownloadResult> DownloadManualFileAsync(Guid id)
+    {
+        var record = await GetManualRecordAsync(id);
+        if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
+        {
+            return new(false, "当前记录还没有可下载的附件。");
+        }
+
+        return await _documentFileOrchestrator.DownloadAsync(record.PrimaryFile);
+    }
+
+    private async Task<bool> UseRemoteStorageAsync()
+    {
+        if (_storageConnectionProfileService is null)
+        {
+            return false;
+        }
+
+        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
+        return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
+    }
+
+    private async Task SyncReferenceDataAsync()
+    {
+        if (_businessAggregateRepository is null || !await UseRemoteStorageAsync())
+        {
+            return;
+        }
+
+        var members = await _businessAggregateRepository.GetMembersAsync();
+        if (members.Count > 0)
+        {
+            ReplaceLocal(_members, members.ToList());
+        }
+
+        var spaces = await _businessAggregateRepository.GetSpacesAsync();
+        if (spaces.Count > 0)
+        {
+            ReplaceLocal(_spaces, spaces.ToList());
+        }
+    }
+
+    private static void ReplaceLocal<T>(List<T> target, List<T> source)
+    {
+        target.Clear();
+        target.AddRange(source);
+    }
+
+    private static void UpsertLocal<T>(List<T> target, T value, Func<T, bool> predicate)
+    {
+        var existing = target.FirstOrDefault(predicate);
+        if (existing is null)
+        {
+            target.Add(value);
+            return;
+        }
+
+        var index = target.IndexOf(existing);
+        target[index] = value;
     }
 }
 

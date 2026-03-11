@@ -1,4 +1,5 @@
 using HomeHoney.Models;
+using HomeHoney.Services.Storage;
 using System.IO;
 using System.Text.Json;
 
@@ -8,11 +9,18 @@ public sealed class UserPreferenceService
 {
     private static readonly string PreferenceStoragePath = Path.Combine(AppContext.BaseDirectory, "homehoney.user-preferences.json");
     private readonly UserPreference _preferences = new();
+    private readonly PreferenceRepository? _preferenceRepository;
 
     public event Action? Changed;
 
     public UserPreferenceService()
     {
+        Load();
+    }
+
+    public UserPreferenceService(PreferenceRepository preferenceRepository)
+    {
+        _preferenceRepository = preferenceRepository;
         Load();
     }
 
@@ -45,7 +53,14 @@ public sealed class UserPreferenceService
 
     public Task UpdateNotificationSettingsAsync(NotificationPreference notificationPreference)
     {
-        _preferences.NotificationSettings = notificationPreference;
+        _preferences.NotificationSettings = notificationPreference ?? new NotificationPreference();
+        NotifyStateChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateStoragePreferenceAsync(StoragePreference storagePreference)
+    {
+        _preferences.StoragePreference = storagePreference ?? new StoragePreference();
         NotifyStateChanged();
         return Task.CompletedTask;
     }
@@ -99,6 +114,7 @@ public sealed class UserPreferenceService
     private void NotifyStateChanged()
     {
         Save();
+        SaveRemote();
         Changed?.Invoke();
     }
 
@@ -106,29 +122,20 @@ public sealed class UserPreferenceService
     {
         try
         {
-            if (!File.Exists(PreferenceStoragePath))
+            if (File.Exists(PreferenceStoragePath))
             {
-                return;
+                var raw = File.ReadAllText(PreferenceStoragePath);
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    var saved = JsonSerializer.Deserialize<UserPreference>(raw);
+                    if (saved is not null)
+                    {
+                        Apply(saved);
+                    }
+                }
             }
 
-            var raw = File.ReadAllText(PreferenceStoragePath);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return;
-            }
-
-            var saved = JsonSerializer.Deserialize<UserPreference>(raw);
-            if (saved is null)
-            {
-                return;
-            }
-
-            _preferences.ThemeMode = saved.ThemeMode;
-            _preferences.NotificationSettings = saved.NotificationSettings ?? new NotificationPreference();
-            _preferences.HomeModuleOrder = saved.HomeModuleOrder.Count > 0 ? saved.HomeModuleOrder : _preferences.HomeModuleOrder;
-            _preferences.HiddenHomeModules = saved.HiddenHomeModules.Count > 0 ? saved.HiddenHomeModules : [];
-            _preferences.PrivacyMode = saved.PrivacyMode;
-            _preferences.OnboardingCompleted = saved.OnboardingCompleted;
+            LoadRemote();
         }
         catch
         {
@@ -147,5 +154,49 @@ public sealed class UserPreferenceService
         {
             // Ignore persistence failures and keep current session state.
         }
+    }
+
+    private void LoadRemote()
+    {
+        try
+        {
+            if (_preferenceRepository is null)
+            {
+                return;
+            }
+
+            var remote = _preferenceRepository.GetUserPreferenceAsync().GetAwaiter().GetResult();
+            if (remote is not null)
+            {
+                Apply(remote);
+            }
+        }
+        catch
+        {
+            // Keep local settings if remote load fails.
+        }
+    }
+
+    private void SaveRemote()
+    {
+        try
+        {
+            _preferenceRepository?.SaveUserPreferenceAsync(_preferences).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Remote persistence is best-effort and should not break local preferences.
+        }
+    }
+
+    private void Apply(UserPreference saved)
+    {
+        _preferences.ThemeMode = saved.ThemeMode;
+        _preferences.NotificationSettings = saved.NotificationSettings ?? new NotificationPreference();
+        _preferences.HomeModuleOrder = saved.HomeModuleOrder.Count > 0 ? saved.HomeModuleOrder : _preferences.HomeModuleOrder;
+        _preferences.HiddenHomeModules = saved.HiddenHomeModules.Count > 0 ? saved.HiddenHomeModules : [];
+        _preferences.PrivacyMode = saved.PrivacyMode;
+        _preferences.OnboardingCompleted = saved.OnboardingCompleted;
+        _preferences.StoragePreference = saved.StoragePreference ?? new StoragePreference();
     }
 }

@@ -31,6 +31,12 @@ public sealed class ManualRecord
 
     public int AttachmentCount { get; set; }
 
+    public FileResource? PrimaryFile { get; set; }
+
+    public string IntegrityStatus { get; set; } = "Healthy";
+
+    public string? SyncMessage { get; set; }
+
     public List<string> Tags { get; set; } = [];
 
     public DateTime LastUpdatedAt { get; set; } = DateTime.Now;

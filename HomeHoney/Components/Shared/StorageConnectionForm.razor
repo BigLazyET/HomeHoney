@@ -1,0 +1,65 @@
+@using HomeHoney.Models
+
+<EditForm Model="Model" OnValidSubmit="SubmitAsync">
+    <div class="form-grid">
+        <label>
+            <span>配置名称</span>
+            <InputText @bind-Value="Model.DisplayName" />
+        </label>
+        <label>
+            <span>文件服务地址</span>
+            <InputText @bind-Value="Model.FileServiceBaseUrl" />
+        </label>
+        <label>
+            <span>文件服务 API 路径</span>
+            <InputText @bind-Value="Model.FileServiceApiPath" />
+        </label>
+        <label>
+            <span>Mongo 数据库名</span>
+            <InputText @bind-Value="Model.MongoDatabaseName" />
+        </label>
+        <label class="form-grid-span-2">
+            <span>Mongo 连接字符串</span>
+            <InputText value="@MongoConnectionString" @oninput="HandleMongoConnectionInput" />
+        </label>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    {
+        <div class="storage-status @(IsSuccess ? "is-success" : "is-error")">
+            @StatusMessage
+        </div>
+    }
+
+    <div class="page-actions">
+        <button class="button-primary" type="submit">@PrimaryActionText</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public StorageConnectionProfile Model { get; set; } = new();
+
+    [Parameter]
+    public string MongoConnectionString { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> MongoConnectionStringChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmit { get; set; }
+
+    [Parameter]
+    public string PrimaryActionText { get; set; } = "保存并验证";
+
+    [Parameter]
+    public string? StatusMessage { get; set; }
+
+    [Parameter]
+    public bool IsSuccess { get; set; }
+
+    private Task SubmitAsync() => OnSubmit.InvokeAsync();
+
+    private Task HandleMongoConnectionInput(ChangeEventArgs args)
+        => MongoConnectionStringChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+}

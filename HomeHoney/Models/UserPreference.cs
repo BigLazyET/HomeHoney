@@ -25,6 +25,29 @@ public sealed class NotificationPreference
     public bool FridgeNoteEnabled { get; set; } = true;
 }
 
+public sealed class StoragePreference
+{
+    public string DisplayName { get; set; } = "本地默认";
+
+    public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
+
+    public string FileServiceApiPath { get; set; } = "/api";
+
+    public string MongoConnectionStringSecretKey { get; set; } = "storage.mongo.connection";
+
+    public string MongoConnectionStringPreview { get; set; } = string.Empty;
+
+    public string MongoDatabaseName { get; set; } = "homehoney";
+
+    public bool IsActive { get; set; } = true;
+
+    public DateTime? LastValidatedAt { get; set; }
+
+    public StorageValidationStatus ValidationStatus { get; set; } = StorageValidationStatus.Unknown;
+
+    public string? ValidationMessage { get; set; }
+}
+
 public sealed class UserPreference
 {
     public ThemeMode ThemeMode { get; set; } = ThemeMode.System;
@@ -45,4 +68,6 @@ public sealed class UserPreference
     public PrivacyMode PrivacyMode { get; set; } = PrivacyMode.Standard;
 
     public bool OnboardingCompleted { get; set; }
+
+    public StoragePreference StoragePreference { get; set; } = new();
 }

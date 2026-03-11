@@ -1,0 +1,56 @@
+@page "/settings/storage"
+@inject HomeHoney.Services.Storage.IStorageConnectionProfileService StorageConnectionProfileService
+
+<section class="content-page form-page">
+    <PageHeader Eyebrow="外部存储"
+                Title="文件服务与数据服务连接"
+                Description="修改本地 FileBrowser 与 MongoDB 的连接目标。保存后，资料文件和其余业务数据会优先使用最新配置。"
+                BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsStorage)"
+                BackText="返回设置">
+    </PageHeader>
+
+    <div class="detail-card">
+        <StorageConnectionForm Model="_profile"
+                               MongoConnectionString="_mongoConnectionString"
+                               MongoConnectionStringChanged="HandleMongoConnectionChanged"
+                               OnSubmit="HandleSaveAsync"
+                               StatusMessage="_statusMessage"
+                               IsSuccess="_isSuccess" />
+    </div>
+
+    <div class="detail-card">
+        <h2>当前策略</h2>
+        <ul>
+            <li>文件本体使用外部文件服务</li>
+            <li>非文件业务数据使用 MongoDB</li>
+            <li>最近一次成功保存的连接会在应用重启后继续生效</li>
+        </ul>
+    </div>
+</section>
+
+@code {
+    private StorageConnectionProfile _profile = new();
+    private string _mongoConnectionString = string.Empty;
+    private string? _statusMessage;
+    private bool _isSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _profile = await StorageConnectionProfileService.GetActiveProfileAsync();
+        _mongoConnectionString = await StorageConnectionProfileService.GetMongoConnectionStringAsync() ?? string.Empty;
+    }
+
+    private Task HandleMongoConnectionChanged(string value)
+    {
+        _mongoConnectionString = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        var result = await StorageConnectionProfileService.SaveProfileAsync(_profile, _mongoConnectionString);
+        _statusMessage = result.Message;
+        _isSuccess = result.IsSuccess;
+        _profile = result.Profile;
+    }
+}

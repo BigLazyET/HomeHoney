@@ -1,5 +1,6 @@
 using HomeHoney.Models;
 using HomeHoney.Services.Navigation;
+using HomeHoney.Services.Storage;
 
 namespace HomeHoney.Services.Collaboration;
 
@@ -52,15 +53,87 @@ public sealed class FamilyCollaborationService
         },
     ];
 
-    public Task<IReadOnlyList<FridgeNote>> GetFridgeNotesAsync() => Task.FromResult<IReadOnlyList<FridgeNote>>(_fridgeNotes.OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList());
+    private readonly CollaborationRepository? _collaborationRepository;
+    private readonly ILocalCacheStore? _localCacheStore;
+    private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
 
-    public Task<IReadOnlyList<Memo>> GetMemosAsync() => Task.FromResult<IReadOnlyList<Memo>>(_memos.OrderBy(item => item.DueAt).ToList());
+    public FamilyCollaborationService()
+    {
+    }
 
-    public Task<FridgeNote?> GetFridgeNoteAsync(Guid id) => Task.FromResult(_fridgeNotes.FirstOrDefault(note => note.Id == id));
+    public FamilyCollaborationService(
+        CollaborationRepository collaborationRepository,
+        ILocalCacheStore localCacheStore,
+        IStorageConnectionProfileService storageConnectionProfileService)
+    {
+        _collaborationRepository = collaborationRepository;
+        _localCacheStore = localCacheStore;
+        _storageConnectionProfileService = storageConnectionProfileService;
+    }
 
-    public Task<Memo?> GetMemoAsync(Guid id) => Task.FromResult(_memos.FirstOrDefault(memo => memo.Id == id));
+    public async Task<IReadOnlyList<FridgeNote>> GetFridgeNotesAsync()
+    {
+        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
+        {
+            try
+            {
+                var remote = (await _collaborationRepository.GetFridgeNotesAsync()).OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
+                ReplaceLocal(_fridgeNotes, remote);
+                if (_localCacheStore is not null)
+                {
+                    await _localCacheStore.SetAsync("collaboration.fridge-notes", remote);
+                }
 
-    public Task SaveFridgeNoteAsync(FridgeNote fridgeNote)
+                return remote;
+            }
+            catch
+            {
+                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<FridgeNote>>("collaboration.fridge-notes");
+                if (cached is not null)
+                {
+                    ReplaceLocal(_fridgeNotes, cached);
+                    return cached;
+                }
+            }
+        }
+
+        return _fridgeNotes.OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
+    }
+
+    public async Task<IReadOnlyList<Memo>> GetMemosAsync()
+    {
+        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
+        {
+            try
+            {
+                var remote = (await _collaborationRepository.GetMemosAsync()).OrderBy(item => item.DueAt).ToList();
+                ReplaceLocal(_memos, remote);
+                if (_localCacheStore is not null)
+                {
+                    await _localCacheStore.SetAsync("collaboration.memos", remote);
+                }
+
+                return remote;
+            }
+            catch
+            {
+                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<Memo>>("collaboration.memos");
+                if (cached is not null)
+                {
+                    ReplaceLocal(_memos, cached);
+                    return cached;
+                }
+            }
+        }
+
+        return _memos.OrderBy(item => item.DueAt).ToList();
+    }
+
+    public async Task<FridgeNote?> GetFridgeNoteAsync(Guid id) => (await GetFridgeNotesAsync()).FirstOrDefault(note => note.Id == id);
+
+    public async Task<Memo?> GetMemoAsync(Guid id) => (await GetMemosAsync()).FirstOrDefault(memo => memo.Id == id);
+
+    public async Task SaveFridgeNoteAsync(FridgeNote fridgeNote)
     {
         fridgeNote.UpdatedAt = DateTime.Now;
         var existing = _fridgeNotes.FirstOrDefault(item => item.Id == fridgeNote.Id);
@@ -75,10 +148,17 @@ public sealed class FamilyCollaborationService
             _fridgeNotes[index] = fridgeNote;
         }
 
-        return Task.CompletedTask;
+        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
+        {
+            await _collaborationRepository.SaveFridgeNoteAsync(fridgeNote);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("collaboration.fridge-notes", _fridgeNotes);
+            }
+        }
     }
 
-    public Task SaveMemoAsync(Memo memo)
+    public async Task SaveMemoAsync(Memo memo)
     {
         memo.UpdatedAt = DateTime.Now;
         var existing = _memos.FirstOrDefault(item => item.Id == memo.Id);
@@ -93,19 +173,35 @@ public sealed class FamilyCollaborationService
             _memos[index] = memo;
         }
 
-        return Task.CompletedTask;
+        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
+        {
+            await _collaborationRepository.SaveMemoAsync(memo);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("collaboration.memos", _memos);
+            }
+        }
     }
 
-    public Task<bool> DeleteFridgeNoteAsync(Guid id)
+    public async Task<bool> DeleteFridgeNoteAsync(Guid id)
     {
         var existing = _fridgeNotes.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         _fridgeNotes.Remove(existing);
-        return Task.FromResult(true);
+        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
+        {
+            await _collaborationRepository.DeleteFridgeNoteAsync(id);
+            if (_localCacheStore is not null)
+            {
+                await _localCacheStore.SetAsync("collaboration.fridge-notes", _fridgeNotes);
+            }
+        }
+
+        return true;
     }
 
     public FridgeNote CreateFridgeNoteTemplate() => new() { DueAt = DateTime.Today.AddDays(1).AddHours(18) };
@@ -141,6 +237,24 @@ public sealed class FamilyCollaborationService
         var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, note.Title, note.Content, AppRoutes.FridgeNoteEdit(note.Id), note.Priority.ToString(), note.DueAt));
         var memos = _memos.Select(memo => new CollaborationSummary(memo.Id, memo.Title, memo.Content, AppRoutes.MemoDetail(memo.Id), memo.Importance.ToString(), memo.DueAt));
         return fridge.Concat(memos).OrderBy(item => item.DueAt ?? DateTime.MaxValue).Take(maxItems).ToList();
+    }
+
+    private async Task<bool> UseRemoteStorageAsync()
+    {
+        if (_storageConnectionProfileService is null)
+        {
+            return false;
+        }
+
+        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
+        return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
+    }
+
+    private static void ReplaceLocal<T>(List<T> target, List<T> source)
+    {
+        target.Clear();
+        target.AddRange(source);
     }
 }
 

@@ -23,6 +23,7 @@ public sealed class NavigationStructureService
 
     public IReadOnlyList<NavigationItem> GetSettingSections() =>
     [
+        new("外部存储", "🗄️", AppRoutes.SettingsStorage),
         new("外观", "🎨", AppRoutes.SettingsTheme),
         new("提醒", "🔔", AppRoutes.SettingsNotifications),
         new("首页布局", "🧩", AppRoutes.SettingsHomeLayout),
