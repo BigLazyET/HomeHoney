@@ -27,7 +27,7 @@ public sealed class NotificationPreference
 
 public sealed class StoragePreference
 {
-    public string DisplayName { get; set; } = "本地默认";
+    public string DisplayName { get; set; } = "默认连接";
 
     public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
 

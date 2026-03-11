@@ -1,19 +1,39 @@
 ﻿@inject NavigationManager NavigationManager
 @inject UserPreferenceService UserPreferenceService
+@using HomeHoney.Services.Diagnostics
 
-<Router AppAssembly="@typeof(Routes).Assembly" OnNavigateAsync="HandleNavigationAsync">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
+<AppErrorBoundary>
+    <ChildContent>
+        <Router AppAssembly="@typeof(Routes).Assembly" OnNavigateAsync="HandleNavigationAsync">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(Layout.MainLayout)">
+                    <EmptyState Icon="🧭"
+                                Title="页面不存在"
+                                Description="你访问的页面还没有准备好，可以返回首页继续浏览。" />
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </ChildContent>
+    <ErrorContent Context="ex">
         <LayoutView Layout="@typeof(Layout.MainLayout)">
-            <EmptyState Icon="🧭"
-                        Title="页面不存在"
-                        Description="你访问的页面还没有准备好，可以返回首页继续浏览。" />
+            <section class="content-page">
+                <div class="detail-card">
+                    <span class="page-eyebrow">运行时异常</span>
+                    <h1>应用遇到了未处理错误</h1>
+                    <p>请查看 @RuntimeDiagnostics.LogTargetDescription 定位具体异常。</p>
+                    <details>
+                        <summary>展开异常详情</summary>
+                        <pre style="white-space: pre-wrap; color: var(--danger-color);">@ex</pre>
+                    </details>
+                </div>
+            </section>
         </LayoutView>
-    </NotFound>
-</Router>
+    </ErrorContent>
+</AppErrorBoundary>
 
 @code {
     private Task HandleNavigationAsync(NavigationContext context)

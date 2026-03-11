@@ -42,7 +42,6 @@
 - `ChecksumOrEtag`
 - `UploadedAt`
 - `LastSyncedAt`
-- `CachedLocalPath`
 - `AvailabilityStatus`
 
 **验证规则**
@@ -52,8 +51,7 @@
 
 **状态流转**
 - `PendingUpload` → `Available`
-- `Available` → `Cached`
-- `Available` / `Cached` → `Missing` / `SyncError`
+- `Available` → `Missing` / `SyncError`
 - `Missing` / `SyncError` → `Recovered` / `Archived`
 
 ## 3. FileBackedDocumentRecord
@@ -126,18 +124,17 @@
 
 ## 5. SyncOperation
 
-**描述**：跟踪本地缓存、文件服务和 MongoDB 之间一次操作的最终一致性结果。
+**描述**：跟踪文件服务和 MongoDB 之间一次操作的最终一致性结果。
 
 **关键字段**
 - `OperationId`
-- `OperationType` (`UploadFile`, `SaveMetadata`, `DeleteRecord`, `DownloadFile`, `RefreshCache`)
+- `OperationType` (`UploadFile`, `SaveMetadata`, `DeleteRecord`, `DownloadFile`)
 - `TargetEntityType`
 - `TargetEntityId`
 - `StartedAt`
 - `CompletedAt`
 - `RemoteFileStatus`
 - `RemoteDataStatus`
-- `LocalCacheStatus`
 - `UserVisibleMessage`
 - `RetryCount`
 
@@ -157,7 +154,7 @@
 - 一个 `FileBackedDocumentRecord` 关联一个主 `FileResource`，并可扩展到多个附加文件
 - 多个 `BusinessAggregateRecord` 可通过 `DocumentId`、`OwnerMemberId`、`RelatedSpaceId` 等字段关联文件性质资源
 - 每次远端读写都应产生或更新一条 `SyncOperation`
-- 本地 SQLite 缓存保存 `FileBackedDocumentRecord`、`BusinessAggregateRecord` 和 `SyncOperation` 的离线快照；本地文件缓存保存已下载文件副本
+- 本地仅保留连接配置相关的 Preferences / SecureStorage，不保存业务数据或文件副本
 
 ## 完成定义映射
 

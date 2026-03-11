@@ -20,7 +20,7 @@
         </label>
         <label class="form-grid-span-2">
             <span>Mongo 连接字符串</span>
-            <InputText value="@MongoConnectionString" @oninput="HandleMongoConnectionInput" />
+            <InputText @bind-Value="MongoConnectionStringProxy" @bind-Value:event="oninput" />
         </label>
     </div>
 
@@ -60,6 +60,17 @@
 
     private Task SubmitAsync() => OnSubmit.InvokeAsync();
 
-    private Task HandleMongoConnectionInput(ChangeEventArgs args)
-        => MongoConnectionStringChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    private string MongoConnectionStringProxy
+    {
+        get => MongoConnectionString;
+        set
+        {
+            if (string.Equals(MongoConnectionString, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _ = MongoConnectionStringChanged.InvokeAsync(value);
+        }
+    }
 }

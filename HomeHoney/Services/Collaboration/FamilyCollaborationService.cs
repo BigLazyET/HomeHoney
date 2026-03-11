@@ -54,7 +54,6 @@ public sealed class FamilyCollaborationService
     ];
 
     private readonly CollaborationRepository? _collaborationRepository;
-    private readonly ILocalCacheStore? _localCacheStore;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
 
     public FamilyCollaborationService()
@@ -63,11 +62,9 @@ public sealed class FamilyCollaborationService
 
     public FamilyCollaborationService(
         CollaborationRepository collaborationRepository,
-        ILocalCacheStore localCacheStore,
         IStorageConnectionProfileService storageConnectionProfileService)
     {
         _collaborationRepository = collaborationRepository;
-        _localCacheStore = localCacheStore;
         _storageConnectionProfileService = storageConnectionProfileService;
     }
 
@@ -79,21 +76,11 @@ public sealed class FamilyCollaborationService
             {
                 var remote = (await _collaborationRepository.GetFridgeNotesAsync()).OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
                 ReplaceLocal(_fridgeNotes, remote);
-                if (_localCacheStore is not null)
-                {
-                    await _localCacheStore.SetAsync("collaboration.fridge-notes", remote);
-                }
-
                 return remote;
             }
             catch
             {
-                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<FridgeNote>>("collaboration.fridge-notes");
-                if (cached is not null)
-                {
-                    ReplaceLocal(_fridgeNotes, cached);
-                    return cached;
-                }
+                // Fall back to the current in-memory view when the remote service is unavailable.
             }
         }
 
@@ -108,21 +95,11 @@ public sealed class FamilyCollaborationService
             {
                 var remote = (await _collaborationRepository.GetMemosAsync()).OrderBy(item => item.DueAt).ToList();
                 ReplaceLocal(_memos, remote);
-                if (_localCacheStore is not null)
-                {
-                    await _localCacheStore.SetAsync("collaboration.memos", remote);
-                }
-
                 return remote;
             }
             catch
             {
-                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<Memo>>("collaboration.memos");
-                if (cached is not null)
-                {
-                    ReplaceLocal(_memos, cached);
-                    return cached;
-                }
+                // Fall back to the current in-memory view when the remote service is unavailable.
             }
         }
 
@@ -151,10 +128,6 @@ public sealed class FamilyCollaborationService
         if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
         {
             await _collaborationRepository.SaveFridgeNoteAsync(fridgeNote);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("collaboration.fridge-notes", _fridgeNotes);
-            }
         }
     }
 
@@ -176,10 +149,6 @@ public sealed class FamilyCollaborationService
         if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
         {
             await _collaborationRepository.SaveMemoAsync(memo);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("collaboration.memos", _memos);
-            }
         }
     }
 
@@ -195,10 +164,6 @@ public sealed class FamilyCollaborationService
         if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
         {
             await _collaborationRepository.DeleteFridgeNoteAsync(id);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("collaboration.fridge-notes", _fridgeNotes);
-            }
         }
 
         return true;

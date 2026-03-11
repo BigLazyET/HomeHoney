@@ -1,10 +1,10 @@
-using System.Text.Json;
+using System.Collections.Concurrent;
 
 namespace HomeHoney.Services.Storage;
 
 public sealed class SecureSecretStore : ISecretStore
 {
-    private static readonly string SecretFilePath = Path.Combine(AppContext.BaseDirectory, "homehoney.secrets.json");
+    private static readonly ConcurrentDictionary<string, string> FallbackSecrets = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public async Task SetSecretAsync(string key, string value, CancellationToken cancellationToken = default)
@@ -12,10 +12,12 @@ public sealed class SecureSecretStore : ISecretStore
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            var secrets = await LoadAsync(cancellationToken);
-            secrets[key] = value;
-            var raw = JsonSerializer.Serialize(secrets);
-            await File.WriteAllTextAsync(SecretFilePath, raw, cancellationToken);
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            await global::Microsoft.Maui.Storage.SecureStorage.Default.SetAsync(key, value);
+#else
+            FallbackSecrets[key] = value;
+            await Task.CompletedTask;
+#endif
         }
         finally
         {
@@ -28,30 +30,15 @@ public sealed class SecureSecretStore : ISecretStore
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            var secrets = await LoadAsync(cancellationToken);
-            return secrets.TryGetValue(key, out var value) ? value : null;
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            return await global::Microsoft.Maui.Storage.SecureStorage.Default.GetAsync(key);
+#else
+            return FallbackSecrets.TryGetValue(key, out var value) ? value : null;
+#endif
         }
         finally
         {
             _gate.Release();
-        }
-    }
-
-    private static async Task<Dictionary<string, string>> LoadAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (!File.Exists(SecretFilePath))
-            {
-                return [];
-            }
-
-            var raw = await File.ReadAllTextAsync(SecretFilePath, cancellationToken);
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(raw) ?? [];
-        }
-        catch
-        {
-            return [];
         }
     }
 }

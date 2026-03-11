@@ -13,7 +13,6 @@ public sealed class DocumentCatalogService
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
     private readonly IDocumentMetadataRepository? _documentMetadataRepository;
     private readonly IBusinessAggregateRepository? _businessAggregateRepository;
-    private readonly ILocalCacheStore? _localCacheStore;
     private readonly DocumentFileOrchestrator? _documentFileOrchestrator;
 
     public DocumentCatalogService()
@@ -29,13 +28,11 @@ public sealed class DocumentCatalogService
         IStorageConnectionProfileService storageConnectionProfileService,
         IDocumentMetadataRepository documentMetadataRepository,
         IBusinessAggregateRepository businessAggregateRepository,
-        ILocalCacheStore localCacheStore,
         DocumentFileOrchestrator documentFileOrchestrator)
     {
         _storageConnectionProfileService = storageConnectionProfileService;
         _documentMetadataRepository = documentMetadataRepository;
         _businessAggregateRepository = businessAggregateRepository;
-        _localCacheStore = localCacheStore;
         _documentFileOrchestrator = documentFileOrchestrator;
         _insuranceRecords = [];
         _manualRecords = [];
@@ -175,21 +172,12 @@ public sealed class DocumentCatalogService
             {
                 var remote = (await _documentMetadataRepository.GetInsuranceRecordsAsync()).OrderBy(record => record.ExpiryDate).ToList();
                 ReplaceLocal(_insuranceRecords, remote);
-                if (_localCacheStore is not null)
-                {
-                    await _localCacheStore.SetAsync("documents.insurance", remote);
-                }
                 await SyncReferenceDataAsync();
                 return remote;
             }
             catch
             {
-                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<InsuranceRecord>>("documents.insurance");
-                if (cached is not null)
-                {
-                    ReplaceLocal(_insuranceRecords, cached);
-                    return cached;
-                }
+                // Fall back to the current in-memory view when the remote service is unavailable.
             }
         }
 
@@ -204,21 +192,12 @@ public sealed class DocumentCatalogService
             {
                 var remote = (await _documentMetadataRepository.GetManualRecordsAsync()).OrderBy(record => record.SpaceId).ToList();
                 ReplaceLocal(_manualRecords, remote);
-                if (_localCacheStore is not null)
-                {
-                    await _localCacheStore.SetAsync("documents.manuals", remote);
-                }
                 await SyncReferenceDataAsync();
                 return remote;
             }
             catch
             {
-                var cached = _localCacheStore is null ? null : await _localCacheStore.GetAsync<List<ManualRecord>>("documents.manuals");
-                if (cached is not null)
-                {
-                    ReplaceLocal(_manualRecords, cached);
-                    return cached;
-                }
+                // Fall back to the current in-memory view when the remote service is unavailable.
             }
         }
 
@@ -240,10 +219,6 @@ public sealed class DocumentCatalogService
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             await _documentMetadataRepository.SaveInsuranceRecordAsync(record);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("documents.insurance", _insuranceRecords);
-            }
         }
     }
 
@@ -256,10 +231,6 @@ public sealed class DocumentCatalogService
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             await _documentMetadataRepository.SaveManualRecordAsync(record);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("documents.manuals", _manualRecords);
-            }
         }
     }
 
@@ -275,10 +246,6 @@ public sealed class DocumentCatalogService
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             await _documentMetadataRepository.DeleteInsuranceRecordAsync(id);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("documents.insurance", _insuranceRecords);
-            }
         }
 
         return true;
@@ -296,10 +263,6 @@ public sealed class DocumentCatalogService
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             await _documentMetadataRepository.DeleteManualRecordAsync(id);
-            if (_localCacheStore is not null)
-            {
-                await _localCacheStore.SetAsync("documents.manuals", _manualRecords);
-            }
         }
 
         return true;

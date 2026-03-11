@@ -1,26 +1,21 @@
 using HomeHoney.Models;
+using HomeHoney.Services.Diagnostics;
 using HomeHoney.Services.Storage;
-using System.IO;
 using System.Text.Json;
 
 namespace HomeHoney.Services.Preferences;
 
 public sealed class UserPreferenceService
 {
-    private static readonly string PreferenceStoragePath = Path.Combine(AppContext.BaseDirectory, "homehoney.user-preferences.json");
+    private const string PreferenceStorageKey = "homehoney.user-preferences";
     private readonly UserPreference _preferences = new();
-    private readonly PreferenceRepository? _preferenceRepository;
+    private readonly IServiceProvider? _serviceProvider;
 
     public event Action? Changed;
 
-    public UserPreferenceService()
+    public UserPreferenceService(IServiceProvider? serviceProvider = null)
     {
-        Load();
-    }
-
-    public UserPreferenceService(PreferenceRepository preferenceRepository)
-    {
-        _preferenceRepository = preferenceRepository;
+        _serviceProvider = serviceProvider;
         Load();
     }
 
@@ -122,24 +117,19 @@ public sealed class UserPreferenceService
     {
         try
         {
-            if (File.Exists(PreferenceStoragePath))
+            var raw = PlatformPreferenceStore.GetString(PreferenceStorageKey);
+            if (!string.IsNullOrWhiteSpace(raw))
             {
-                var raw = File.ReadAllText(PreferenceStoragePath);
-                if (!string.IsNullOrWhiteSpace(raw))
+                var saved = JsonSerializer.Deserialize<UserPreference>(raw);
+                if (saved is not null)
                 {
-                    var saved = JsonSerializer.Deserialize<UserPreference>(raw);
-                    if (saved is not null)
-                    {
-                        Apply(saved);
-                    }
+                    Apply(saved);
                 }
             }
-
-            LoadRemote();
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore persistence failures and keep in-memory defaults.
+            RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }
 
@@ -148,32 +138,11 @@ public sealed class UserPreferenceService
         try
         {
             var raw = JsonSerializer.Serialize(_preferences);
-            File.WriteAllText(PreferenceStoragePath, raw);
+            PlatformPreferenceStore.SetString(PreferenceStorageKey, raw);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore persistence failures and keep current session state.
-        }
-    }
-
-    private void LoadRemote()
-    {
-        try
-        {
-            if (_preferenceRepository is null)
-            {
-                return;
-            }
-
-            var remote = _preferenceRepository.GetUserPreferenceAsync().GetAwaiter().GetResult();
-            if (remote is not null)
-            {
-                Apply(remote);
-            }
-        }
-        catch
-        {
-            // Keep local settings if remote load fails.
+            RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }
 
@@ -181,11 +150,12 @@ public sealed class UserPreferenceService
     {
         try
         {
-            _preferenceRepository?.SaveUserPreferenceAsync(_preferences).GetAwaiter().GetResult();
+            var preferenceRepository = _serviceProvider?.GetService(typeof(PreferenceRepository)) as PreferenceRepository;
+            preferenceRepository?.SaveUserPreferenceAsync(_preferences).GetAwaiter().GetResult();
         }
-        catch
+        catch (Exception ex)
         {
-            // Remote persistence is best-effort and should not break local preferences.
+            RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }
 

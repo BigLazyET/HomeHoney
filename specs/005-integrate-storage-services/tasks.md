@@ -24,7 +24,7 @@
 
 ## Phase 1: Setup (环境准备)
 
-**Purpose**: 为外部文件服务、MongoDB 与本地缓存接入建立依赖基线和目录入口
+**Purpose**: 为外部文件服务、MongoDB 与平台级偏好/密钥存储建立依赖基线和目录入口
 
 - [ ] T001 Add storage integration package references and SDK-aligned dependency placeholders in `HomeHoney/HomeHoney.csproj` and `HomeHoney.Tests/HomeHoney.Tests.csproj`
 - [X] T002 [P] Create storage feature scaffolding under `HomeHoney/Services/Storage/` and planned storage models under `HomeHoney/Models/`
@@ -34,7 +34,7 @@
 
 ## Phase 2: Foundational (基础能力 — 阻塞型前置条件)
 
-**Purpose**: 建立配置、远端接入、本地缓存和依赖注入基础设施，阻塞所有用户故事
+**Purpose**: 建立配置、远端接入和依赖注入基础设施，阻塞所有用户故事
 
 **⚠️ CRITICAL**: 用户故事实现前必须完成此阶段
 
@@ -43,11 +43,11 @@
 - [X] T006 [P] Implement editable connection profile and secret abstractions in `HomeHoney/Services/Storage/IStorageConnectionProfileService.cs`, `HomeHoney/Services/Storage/StorageConnectionProfileService.cs`, `HomeHoney/Services/Storage/ISecretStore.cs`, and `HomeHoney/Services/Storage/SecureSecretStore.cs`
 - [X] T007 [P] Implement file service gateway contracts and result mapping in `HomeHoney/Services/Storage/IFileStorageGateway.cs`, `HomeHoney/Services/Storage/FileBrowserFileStorageGateway.cs`, and `HomeHoney/Services/Storage/FileStorageResult.cs`
 - [X] T008 [P] Implement Mongo client factory and repository interfaces in `HomeHoney/Services/Storage/IMongoContextFactory.cs`, `HomeHoney/Services/Storage/MongoContextFactory.cs`, `HomeHoney/Services/Storage/IDocumentMetadataRepository.cs`, and `HomeHoney/Services/Storage/IBusinessAggregateRepository.cs`
-- [X] T009 [P] Implement local offline cache services in `HomeHoney/Services/Storage/ILocalCacheStore.cs`, `HomeHoney/Services/Storage/LocalCacheStore.cs`, `HomeHoney/Services/Storage/ILocalFileCache.cs`, and `HomeHoney/Services/Storage/LocalFileCache.cs`
+- [X] T009 [P] Replace local cache persistence with platform-safe Preferences / SecureStorage boundaries and remove file-backed cache services
 - [X] T010 Wire storage registrations, `HttpClient`, and repository dependencies in `HomeHoney/MauiProgram.cs` and `HomeHoney/HomeHoney.csproj`
 - [X] T011 Add storage settings navigation and route entry points in `HomeHoney/Services/Navigation/AppRoutes.cs`, `HomeHoney/Services/Navigation/NavigationStructureService.cs`, and `HomeHoney/Components/Pages/Settings/SettingsHome.razor`
 
-**Checkpoint**: 连接配置、远端网关、本地缓存和依赖注入基础设施就绪，可开始按用户故事推进
+**Checkpoint**: 连接配置、远端网关和依赖注入基础设施就绪，可开始按用户故事推进
 
 ---
 
@@ -61,7 +61,7 @@
 
 - [X] T012 [US1] Implement storage configuration validation and activation workflow in `HomeHoney/Services/Storage/StorageConfigurationValidator.cs`, `HomeHoney/Services/Storage/StorageConnectionProfileService.cs`, and `HomeHoney/Services/Preferences/UserPreferenceService.cs`
 - [X] T013 [P] [US1] Build storage configuration UI in `HomeHoney/Components/Pages/Settings/StorageSettings.razor` and `HomeHoney/Components/Shared/StorageConnectionForm.razor`
-- [ ] T014 [US1] Connect the storage settings page to app routing and save feedback in `HomeHoney/Components/Routes.razor`, `HomeHoney/Components/Pages/Settings/SettingsHome.razor`, and `HomeHoney/Services/Navigation/AppRoutes.cs`
+- [X] T014 [US1] Connect the storage settings page to app routing and save feedback in `HomeHoney/Components/Routes.razor`, `HomeHoney/Components/Pages/Settings/SettingsHome.razor`, and `HomeHoney/Services/Navigation/AppRoutes.cs`
 - [X] T015 [US1] Ensure active storage profiles load on app startup and are reused across operations in `HomeHoney/MauiProgram.cs` and `HomeHoney/Services/Storage/StorageConnectionProfileService.cs`
 
 **Checkpoint**: 用户无需重新发布应用即可切换外部文件服务和 MongoDB 连接目标
@@ -77,7 +77,7 @@
 ### Implementation for User Story 2
 
 - [X] T016 [P] [US2] Implement file-backed document repositories and orchestration in `HomeHoney/Services/Storage/DocumentMetadataRepository.cs`, `HomeHoney/Services/Storage/DocumentFileOrchestrator.cs`, and `HomeHoney/Services/Storage/FileSyncStateMapper.cs`
-- [X] T017 [US2] Refactor document reads and writes to use Mongo metadata, file gateway, and cache in `HomeHoney/Services/Documents/DocumentCatalogService.cs` and `HomeHoney/Services/Search/SearchIndexService.cs`
+- [X] T017 [US2] Refactor document reads and writes to use Mongo metadata, file gateway, and remote-state feedback in `HomeHoney/Services/Documents/DocumentCatalogService.cs` and `HomeHoney/Services/Search/SearchIndexService.cs`
 - [ ] T018 [P] [US2] Add insurance file upload, download, and sync-state UI in `HomeHoney/Components/Pages/Documents/Insurance/InsuranceList.razor`, `HomeHoney/Components/Pages/Documents/Insurance/InsuranceDetail.razor`, and `HomeHoney/Components/Pages/Documents/Insurance/InsuranceForm.razor`
 - [ ] T019 [P] [US2] Add manual file upload, download, and sync-state UI in `HomeHoney/Components/Pages/Documents/Manuals/ManualList.razor`, `HomeHoney/Components/Pages/Documents/Manuals/ManualDetail.razor`, and `HomeHoney/Components/Pages/Documents/Manuals/ManualForm.razor`
 - [ ] T020 [US2] Surface file integrity, attachment availability, and reminder compatibility in `HomeHoney/Services/Reminders/ReminderCenterService.cs`, `HomeHoney/Components/Pages/Documents/DocumentsHome.razor`, and `HomeHoney/Models/InsuranceRecord.cs`
@@ -95,14 +95,14 @@
 
 ### Implementation for User Story 3
 
-- [X] T022 [P] [US3] Implement Mongo-backed non-file repositories in `HomeHoney/Services/Storage/BusinessAggregateRepository.cs`, `HomeHoney/Services/Storage/CollaborationRepository.cs`, `HomeHoney/Services/Storage/ReminderRepository.cs`, and `HomeHoney/Services/Storage/PreferenceRepository.cs`
-- [X] T023 [US3] Refactor collaboration CRUD to use Mongo repositories and cache in `HomeHoney/Services/Collaboration/FamilyCollaborationService.cs`, `HomeHoney/Models/FridgeNote.cs`, and `HomeHoney/Models/Memo.cs`
-- [X] T024 [US3] Refactor reminder and preference persistence to use Mongo-aware services in `HomeHoney/Services/Reminders/ReminderCenterService.cs`, `HomeHoney/Services/Preferences/UserPreferenceService.cs`, and `HomeHoney/Services/Storage/PreferenceRepository.cs`
+- [X] T022 [P] [US3] Implement Mongo-backed non-file repositories in `HomeHoney/Services/Storage/BusinessAggregateRepository.cs`, `HomeHoney/Services/Storage/CollaborationRepository.cs`, and `HomeHoney/Services/Storage/PreferenceRepository.cs`
+- [X] T023 [US3] Refactor collaboration CRUD to use Mongo repositories and in-session fallback state in `HomeHoney/Services/Collaboration/FamilyCollaborationService.cs`, `HomeHoney/Models/FridgeNote.cs`, and `HomeHoney/Models/Memo.cs`
+- [X] T024 [US3] Refactor reminder and preference persistence to use Mongo-aware services plus Preferences / SecureStorage boundaries in `HomeHoney/Services/Reminders/ReminderCenterService.cs`, `HomeHoney/Services/Preferences/UserPreferenceService.cs`, and `HomeHoney/Services/Storage/PreferenceRepository.cs`
 - [ ] T025 [P] [US3] Update fridge note and memo pages for remote-backed CRUD feedback in `HomeHoney/Components/Pages/FridgeNotes/FridgeNoteBoard.razor`, `HomeHoney/Components/Pages/FridgeNotes/FridgeNoteForm.razor`, `HomeHoney/Components/Pages/Memos/MemoList.razor`, `HomeHoney/Components/Pages/Memos/MemoForm.razor`, and `HomeHoney/Components/Pages/Memos/MemoDetail.razor`
-- [ ] T026 [P] [US3] Update reminder, search, and settings pages to reflect remote persistence and cache state in `HomeHoney/Components/Pages/Reminders/ReminderCenter.razor`, `HomeHoney/Components/Pages/Reminders/Search.razor`, `HomeHoney/Components/Pages/Settings/NotificationSettings.razor`, and `HomeHoney/Components/Pages/Settings/PrivacySettings.razor`
+- [ ] T026 [P] [US3] Update reminder, search, and settings pages to reflect remote persistence and failure-state feedback in `HomeHoney/Components/Pages/Reminders/ReminderCenter.razor`, `HomeHoney/Components/Pages/Reminders/Search.razor`, `HomeHoney/Components/Pages/Settings/NotificationSettings.razor`, and `HomeHoney/Components/Pages/Settings/PrivacySettings.razor`
 - [ ] T027 [US3] Preserve household-member, space, and document metadata relationships in `HomeHoney/Models/HouseholdMember.cs`, `HomeHoney/Models/Space.cs`, `HomeHoney/Models/ReminderItem.cs`, and `HomeHoney/Services/Storage/BusinessAggregateRepository.cs`
 
-**Checkpoint**: 非文件业务数据已迁移到 MongoDB 持久化，同时保留本地缓存和同步状态可见性
+**Checkpoint**: 非文件业务数据已迁移到 MongoDB 持久化，同时保持明确的远端失败与同步状态可见性
 
 ---
 
@@ -110,8 +110,8 @@
 
 **Purpose**: 完成文档同步、回归验证和手动验收
 
-- [ ] T028 [P] Update repository guidance and environment notes in `README.md` and `.github/agents/copilot-instructions.md`
-- [ ] T029 [P] Sync final storage architecture and validation notes in `specs/005-integrate-storage-services/research.md`, `specs/005-integrate-storage-services/data-model.md`, `specs/005-integrate-storage-services/contracts/storage-integration-contract.md`, and `specs/005-integrate-storage-services/quickstart.md`
+- [X] T028 [P] Update repository guidance and environment notes in `README.md` and `.github/agents/copilot-instructions.md`
+- [X] T029 [P] Sync final storage architecture and validation notes in `specs/005-integrate-storage-services/research.md`, `specs/005-integrate-storage-services/data-model.md`, `specs/005-integrate-storage-services/contracts/storage-integration-contract.md`, and `specs/005-integrate-storage-services/quickstart.md`
 - [X] T030 Run build and regression validation for `HomeHoney/HomeHoney.csproj` and `HomeHoney.Tests/HomeHoney.Tests.csproj`
 - [ ] T031 Run manual storage scenarios from `specs/005-integrate-storage-services/quickstart.md` against the local FileBrowser and Mongo services
 
@@ -221,7 +221,7 @@ T027 Relationship preservation and aggregate consistency
 
 ### Incremental Delivery
 
-1. Setup + Foundational → 建立远端接入与本地缓存基础设施
+1. Setup + Foundational → 建立远端接入与平台级偏好/密钥持久化基础设施
 2. User Story 1 → 配置入口与激活机制完成
 3. User Story 2 → 文件性质资源迁移到“文件服务 + Mongo 元数据”闭环
 4. User Story 3 → 非文件业务数据迁移到 MongoDB CRUD 闭环
@@ -244,5 +244,5 @@ T027 Relationship preservation and aggregate consistency
 - `[USx]` 标签保证任务可追溯到具体用户故事
 - 本特性未要求新增测试优先开发流程，因此未单独拆分测试先行任务
 - `T030` 负责运行现有测试与构建回归，不代表新增测试覆盖范围自动满足
-- 如后续实现决定移除本地 SQLite 缓存或本地文件缓存，必须先回到规范/宪章层处理冲突
-- 建议先用默认本地 FileBrowser / Mongo 连接完成最小闭环，再扩展到失败恢复与缓存一致性
+- 应用本地只保留 Preferences / SecureStorage；不要重新引入业务数据或文件内容落盘
+- 建议先用默认本地 FileBrowser / Mongo 连接完成最小闭环，再扩展到更完整的远端异常处理

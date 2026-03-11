@@ -45,9 +45,5 @@ public sealed class ReminderItem
 
     public string Href { get; set; } = "/";
 
-    public bool UsesCachedData { get; set; }
-
-    public string? DataStateMessage { get; set; }
-
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

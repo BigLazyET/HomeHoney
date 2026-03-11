@@ -29,8 +29,6 @@ public sealed class SyncOperation
 
     public SyncExecutionStatus RemoteDataStatus { get; set; } = SyncExecutionStatus.Queued;
 
-    public SyncExecutionStatus LocalCacheStatus { get; set; } = SyncExecutionStatus.Queued;
-
     public string? UserVisibleMessage { get; set; }
 
     public int RetryCount { get; set; }

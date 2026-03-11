@@ -10,19 +10,11 @@ public sealed class ReminderCenterService
 {
     private readonly DocumentCatalogService _documentCatalogService;
     private readonly FamilyCollaborationService _familyCollaborationService;
-    private readonly ReminderRepository? _reminderRepository;
 
     public ReminderCenterService(DocumentCatalogService documentCatalogService, FamilyCollaborationService familyCollaborationService)
     {
         _documentCatalogService = documentCatalogService;
         _familyCollaborationService = familyCollaborationService;
-    }
-
-    public ReminderCenterService(DocumentCatalogService documentCatalogService, FamilyCollaborationService familyCollaborationService, ReminderRepository reminderRepository)
-    {
-        _documentCatalogService = documentCatalogService;
-        _familyCollaborationService = familyCollaborationService;
-        _reminderRepository = reminderRepository;
     }
 
     public async Task<IReadOnlyList<ReminderItem>> GetUpcomingAsync(int days = 30)
@@ -110,12 +102,6 @@ public sealed class ReminderCenterService
             })
             .Where(item => item.DueAt <= threshold));
 
-        var results = reminders.OrderBy(item => item.DueAt).ToList();
-        if (_reminderRepository is not null)
-        {
-            await _reminderRepository.SaveUpcomingSnapshotAsync(results);
-        }
-
-        return results;
+        return reminders.OrderBy(item => item.DueAt).ToList();
     }
 }

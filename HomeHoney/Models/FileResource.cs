@@ -5,7 +5,6 @@ public enum FileAvailabilityStatus
     Unknown,
     PendingUpload,
     Available,
-    Cached,
     Missing,
     SyncError,
 }
@@ -29,8 +28,6 @@ public sealed class FileResource
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? LastSyncedAt { get; set; }
-
-    public string? CachedLocalPath { get; set; }
 
     public FileAvailabilityStatus AvailabilityStatus { get; set; } = FileAvailabilityStatus.Unknown;
 
