@@ -1,0 +1,1024 @@
+openapi: 3.1.0
+info:
+  title: HomeHoney Backend API
+  version: 0.1.0
+  summary: Unified backend API between the MAUI mobile app and FileBrowser/Mongo downstream services.
+servers:
+  - url: https://api.homehoney.local
+    description: Local development server
+paths:
+  /api/v1/admin/backend-profile:
+    get:
+      summary: Get active backend profile used by the mobile app
+      operationId: getBackendProfile
+      responses:
+        '200':
+          description: Active backend profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackendServiceProfile'
+    put:
+      summary: Update active backend profile used by the mobile app
+      operationId: updateBackendProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBackendServiceProfileRequest'
+      responses:
+        '200':
+          description: Updated backend profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfBackendProfile'
+        '400':
+          description: Validation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/admin/storage:
+    get:
+      summary: Get downstream FileBrowser and Mongo storage settings
+      operationId: getStorageSettings
+      responses:
+        '200':
+          description: Active downstream storage settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownstreamStorageSettings'
+    put:
+      summary: Update downstream FileBrowser and Mongo storage settings
+      operationId: updateStorageSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStorageSettingsRequest'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResult'
+        '400':
+          description: Validation failed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/documents/insurance:
+    get:
+      summary: List insurance documents
+      operationId: listInsuranceDocuments
+      responses:
+        '200':
+          description: Insurance documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InsuranceRecord'
+    post:
+      summary: Create or update an insurance document record
+      operationId: upsertInsuranceDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsuranceRecord'
+      responses:
+        '200':
+          description: Upsert result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfInsuranceRecord'
+  /api/v1/documents/insurance/{documentId}:
+    get:
+      summary: Get insurance document detail
+      operationId: getInsuranceDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Insurance document detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsuranceRecord'
+        '404':
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    delete:
+      summary: Delete insurance document
+      operationId: deleteInsuranceDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResult'
+  /api/v1/documents/insurance/{documentId}/files:upload:
+    post:
+      summary: Upload primary file for an insurance document
+      operationId: uploadInsuranceDocumentFile
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Upload result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfInsuranceRecord'
+  /api/v1/documents/insurance/{documentId}/files/{fileId}:download:
+    get:
+      summary: Download a file attached to an insurance document
+      operationId: downloadInsuranceDocumentFile
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: Binary file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/documents/manuals:
+    get:
+      summary: List manual documents
+      operationId: listManualDocuments
+      responses:
+        '200':
+          description: Manual documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ManualRecord'
+    post:
+      summary: Create or update a manual document record
+      operationId: upsertManualDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualRecord'
+      responses:
+        '200':
+          description: Upsert result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfManualRecord'
+  /api/v1/documents/manuals/{documentId}:
+    get:
+      summary: Get manual document detail
+      operationId: getManualDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Manual document detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRecord'
+    delete:
+      summary: Delete manual document
+      operationId: deleteManualDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResult'
+  /api/v1/documents/manuals/{documentId}/files:upload:
+    post:
+      summary: Upload primary file for a manual document
+      operationId: uploadManualDocumentFile
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Upload result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfManualRecord'
+  /api/v1/documents/manuals/{documentId}/files/{fileId}:download:
+    get:
+      summary: Download a file attached to a manual document
+      operationId: downloadManualDocumentFile
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: Binary file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /api/v1/collaboration/fridge-notes:
+    get:
+      summary: List fridge notes
+      operationId: listFridgeNotes
+      responses:
+        '200':
+          description: Fridge notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FridgeNote'
+    post:
+      summary: Create or update a fridge note
+      operationId: upsertFridgeNote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FridgeNote'
+      responses:
+        '200':
+          description: Upsert result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfFridgeNote'
+  /api/v1/collaboration/fridge-notes/{recordId}:
+    delete:
+      summary: Delete a fridge note
+      operationId: deleteFridgeNote
+      parameters:
+        - $ref: '#/components/parameters/RecordId'
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResult'
+  /api/v1/collaboration/memos:
+    get:
+      summary: List memos
+      operationId: listMemos
+      responses:
+        '200':
+          description: Memo list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Memo'
+    post:
+      summary: Create or update a memo
+      operationId: upsertMemo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Memo'
+      responses:
+        '200':
+          description: Upsert result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfMemo'
+  /api/v1/collaboration/memos/{recordId}:
+    delete:
+      summary: Delete a memo
+      operationId: deleteMemo
+      parameters:
+        - $ref: '#/components/parameters/RecordId'
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResult'
+  /api/v1/reminders:
+    get:
+      summary: Get aggregated reminder list
+      operationId: getReminders
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+      responses:
+        '200':
+          description: Reminder list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReminderView'
+  /api/v1/search:
+    get:
+      summary: Search across documents and collaboration records
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Grouped search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchGroup'
+  /api/v1/preferences/me:
+    get:
+      summary: Get current user preference payload
+      operationId: getPreferences
+      responses:
+        '200':
+          description: User preference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreference'
+    put:
+      summary: Update current user preference payload
+      operationId: updatePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreference'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiOperationResultOfPreference'
+components:
+  parameters:
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: FileBrowser-side file identifier. The current implementation accepts values such as `primary`.
+    RecordId:
+      name: recordId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    BackendServiceProfile:
+      type: object
+      required: [profileId, displayName, apiBaseUrl, isActive, validationStatus]
+      properties:
+        profileId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        apiBaseUrl:
+          type: string
+          format: uri
+        isActive:
+          type: boolean
+        lastValidatedAt:
+          type: string
+          format: date-time
+        validationStatus:
+          type: string
+          enum: [valid, invalid, unknown]
+        validationMessage:
+          type: string
+    UpdateBackendServiceProfileRequest:
+      type: object
+      required: [displayName, apiBaseUrl]
+      properties:
+        displayName:
+          type: string
+        apiBaseUrl:
+          type: string
+          format: uri
+    DownstreamStorageSettings:
+      type: object
+      required: [fileServiceBaseUrl, fileServiceApiPath, mongoDatabaseName, validationStatus]
+      properties:
+        fileServiceBaseUrl:
+          type: string
+          format: uri
+        fileServiceApiPath:
+          type: string
+        mongoDatabaseName:
+          type: string
+        mongoConnectionStringPreview:
+          type: string
+        validationStatus:
+          type: string
+          enum: [valid, invalid, unknown]
+        validationMessage:
+          type: string
+    UpdateStorageSettingsRequest:
+      type: object
+      required: [fileServiceBaseUrl, fileServiceApiPath, mongoConnectionString, mongoDatabaseName]
+      properties:
+        fileServiceBaseUrl:
+          type: string
+          format: uri
+        fileServiceApiPath:
+          type: string
+        mongoConnectionString:
+          type: string
+        mongoDatabaseName:
+          type: string
+    FileBackedDocument:
+      type: object
+      required: [documentId, documentType, title, attachmentCount, integrityStatus, updatedAt]
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+          enum: [insurance, manual]
+        title:
+          type: string
+        summary:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        ownerMemberId:
+          type: string
+          format: uuid
+        relatedSpaceId:
+          type: string
+          format: uuid
+        businessStatus:
+          type: string
+        attachmentCount:
+          type: integer
+        integrityStatus:
+          type: string
+          enum: [healthy, metadataOutOfSync, fileMissing, syncError, archived]
+        syncMessage:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        primaryFile:
+          $ref: '#/components/schemas/FileReference'
+    FileReference:
+      type: object
+      properties:
+        fileId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        availabilityStatus:
+          type: string
+          enum: [unknown, pendingUpload, available, missing, syncError]
+        lastSyncedAt:
+          type: string
+          format: date-time
+    FileResource:
+      type: object
+      properties:
+        fileResourceId:
+          type: string
+          format: uuid
+        externalFileId:
+          type: string
+        externalPath:
+          type: string
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        checksumOrEtag:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        lastSyncedAt:
+          type: string
+          format: date-time
+        availabilityStatus:
+          type: string
+          enum: [Unknown, PendingUpload, Available, Missing, SyncError]
+        statusMessage:
+          type: string
+    InsuranceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        policyName:
+          type: string
+        insuredMemberId:
+          type: string
+          format: uuid
+        insuranceCategory:
+          type: string
+          enum: [Medical, CriticalIllness, Accident, Life, Other]
+        status:
+          type: string
+          enum: [Active, PendingRenewal, Expired, Archived]
+        effectiveDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+        providerName:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        summary:
+          type: string
+        attachmentCount:
+          type: integer
+        primaryFile:
+          $ref: '#/components/schemas/FileResource'
+        integrityStatus:
+          type: string
+        syncMessage:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ManualRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceName:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        spaceId:
+          type: string
+          format: uuid
+        manualCategory:
+          type: string
+          enum: [Appliance, Furniture, Electronics, Kids, Other]
+        purchaseDate:
+          type: string
+          format: date
+        warrantyExpiryDate:
+          type: string
+          format: date
+        summary:
+          type: string
+        attachmentCount:
+          type: integer
+        primaryFile:
+          $ref: '#/components/schemas/FileResource'
+        integrityStatus:
+          type: string
+        syncMessage:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    UpsertInsuranceDocumentRequest:
+      type: object
+      required: [title]
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        providerName:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        effectiveDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+        insuranceCategory:
+          type: string
+        status:
+          type: string
+        insuredMemberId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+    UpsertManualDocumentRequest:
+      type: object
+      required: [title]
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        purchaseDate:
+          type: string
+          format: date
+        warrantyExpiryDate:
+          type: string
+          format: date
+        manualCategory:
+          type: string
+        spaceId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+    FridgeNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+          enum: [Shopping, Reminder, Message, Todo]
+        dueAt:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [Normal, Important, Urgent]
+        colorStyle:
+          type: string
+        isPinned:
+          type: boolean
+        isCompleted:
+          type: boolean
+        ownerMemberId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Memo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        dueAt:
+          type: string
+          format: date-time
+        importance:
+          type: string
+          enum: [Normal, Important, Critical]
+        status:
+          type: string
+          enum: [InProgress, Completed, Archived]
+        memoCategory:
+          type: string
+          enum: [FamilyRule, LongTermPlan, ShoppingPlan, Medical, Education, Other]
+        ownerMemberId:
+          type: string
+          format: uuid
+        relatedSpaceId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ReminderView:
+      type: object
+      properties:
+        reminderId:
+          type: string
+          format: uuid
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        dueAt:
+          type: string
+          format: date-time
+        priority:
+          type: string
+        status:
+          type: string
+        navigationTarget:
+          type: string
+        relatedDocumentState:
+          type: string
+    SearchGroup:
+      type: object
+      properties:
+        title:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchItem'
+    SearchItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        category:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        navigationTarget:
+          type: string
+        statusMessage:
+          type: string
+    UserPreference:
+      type: object
+      properties:
+        themeMode:
+          type: string
+          enum: [Light, Dark, System]
+        onboardingCompleted:
+          type: boolean
+        privacyMode:
+          type: string
+          enum: [Standard, MaskSensitive, RequireDetailVerification]
+        notificationSettings:
+          $ref: '#/components/schemas/NotificationPreference'
+        homeModuleOrder:
+          type: array
+          items:
+            type: string
+            enum: [RecentDocuments, UpcomingReminders, QuickActions, FamilyMessages, RecommendedActions]
+        hiddenHomeModules:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [RecentDocuments, UpcomingReminders, QuickActions, FamilyMessages, RecommendedActions]
+        storagePreference:
+          $ref: '#/components/schemas/StoragePreference'
+    NotificationPreference:
+      type: object
+      properties:
+        insuranceEnabled:
+          type: boolean
+        manualEnabled:
+          type: boolean
+        memoEnabled:
+          type: boolean
+        fridgeNoteEnabled:
+          type: boolean
+    StoragePreference:
+      type: object
+      properties:
+        displayName:
+          type: string
+        apiBaseUrl:
+          type: string
+          format: uri
+        fileServiceBaseUrl:
+          type: string
+          format: uri
+        fileServiceApiPath:
+          type: string
+        mongoConnectionStringSecretKey:
+          type: string
+        mongoConnectionStringPreview:
+          type: string
+        mongoDatabaseName:
+          type: string
+        isActive:
+          type: boolean
+        lastValidatedAt:
+          type: string
+          format: date-time
+        validationStatus:
+          type: string
+          enum: [Unknown, Valid, Invalid]
+        validationMessage:
+          type: string
+    ApiOperationResult:
+      type: object
+      required: [operationId, operationType, isSuccess, code, message, occurredAt]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        operationType:
+          type: string
+        targetType:
+          type: string
+        targetId:
+          type: string
+          format: uuid
+        isSuccess:
+          type: boolean
+        isPartialSuccess:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+    ApiOperationResultOfBackendProfile:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BackendServiceProfile'
+    ApiOperationResultOfDocument:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FileBackedDocument'
+    ApiOperationResultOfInsuranceRecord:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/InsuranceRecord'
+    ApiOperationResultOfManualRecord:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ManualRecord'
+    ApiOperationResultOfFridgeNote:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FridgeNote'
+    ApiOperationResultOfMemo:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Memo'
+    ApiOperationResultOfPreference:
+      allOf:
+        - $ref: '#/components/schemas/ApiOperationResult'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/UserPreference'
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
