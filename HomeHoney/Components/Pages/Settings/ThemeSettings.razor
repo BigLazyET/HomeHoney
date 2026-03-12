@@ -1,6 +1,7 @@
 @page "/settings/theme"
 @inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <PageHeader Eyebrow="外观"
@@ -9,6 +10,11 @@
                 BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsTheme)"
                 BackText="返回设置">
     </PageHeader>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="@_isError" />
+    }
 
     <div class="choice-list">
         @foreach (var mode in Enum.GetValues<ThemeMode>())
@@ -24,7 +30,15 @@
 @code {
     private UserPreference Current => UserPreferenceService.GetPreferences();
 
-    private Task SetThemeAsync(ThemeMode mode) => UserPreferenceService.SetThemeModeAsync(mode);
+    private string? _statusMessage;
+    private bool _isError;
+
+    private async Task SetThemeAsync(ThemeMode mode)
+    {
+        await UserPreferenceService.SetThemeModeAsync(mode);
+        _isError = !string.IsNullOrWhiteSpace(UserPreferenceService.LastRemoteSyncErrorMessage);
+        _statusMessage = UserPreferenceService.LastRemoteSyncErrorMessage ?? "主题设置已保存并同步到后端。";
+    }
 
     private static string GetLabel(ThemeMode mode) => mode switch
     {

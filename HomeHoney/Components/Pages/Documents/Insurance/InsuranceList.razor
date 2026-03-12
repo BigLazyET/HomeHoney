@@ -15,6 +15,11 @@
     <FilterBar SearchPlaceholder="搜索保单名称、保障摘要、标签"
                Filters="_filters" />
 
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
+
     @if (_records.Count == 0)
     {
         <EmptyState Icon="🛡️" Title="还没有保险资料" Description="先录入一份保单，后续就能统一查看到期时间和联系人。" />
@@ -40,10 +45,12 @@
 @code {
     private IReadOnlyList<InsuranceRecord> _records = [];
     private readonly IReadOnlyList<string> _filters = ["全部", "生效中", "待续保", "按家庭成员", "30 天内到期"];
+    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _records = await DocumentCatalogService.GetInsuranceRecordsAsync();
+        _statusMessage = DocumentCatalogService.LastErrorMessage;
     }
 
     private static string GetStatusLabel(InsuranceStatus status) => status switch

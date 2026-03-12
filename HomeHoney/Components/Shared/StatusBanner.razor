@@ -1,0 +1,11 @@
+<div class="status-banner @(IsError ? "is-error" : "is-warning")" role="status" aria-live="polite">
+    @Message
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsError { get; set; } = true;
+}

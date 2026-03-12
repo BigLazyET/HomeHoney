@@ -3,11 +3,15 @@ using HomeHoney.Services.Collaboration;
 using HomeHoney.Services.Documents;
 using HomeHoney.Services.Navigation;
 using HomeHoney.Services.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace HomeHoney.Services.Search;
 
 public sealed class SearchIndexService
 {
+    public string? LastErrorMessage { get; private set; }
+
     private readonly DocumentCatalogService _documentCatalogService;
     private readonly FamilyCollaborationService _familyCollaborationService;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
@@ -26,6 +30,7 @@ public sealed class SearchIndexService
         _storageConnectionProfileService = storageConnectionProfileService;
     }
 
+    [ActivatorUtilitiesConstructor]
     public SearchIndexService(
         DocumentCatalogService documentCatalogService,
         FamilyCollaborationService familyCollaborationService,
@@ -38,6 +43,7 @@ public sealed class SearchIndexService
 
     public async Task<IReadOnlyList<SearchGroupResult>> SearchAsync(string? keyword)
     {
+        LastErrorMessage = null;
         keyword ??= string.Empty;
         var term = keyword.Trim();
         if (string.IsNullOrWhiteSpace(term))
@@ -45,19 +51,21 @@ public sealed class SearchIndexService
             return [];
         }
 
-        if (await UsesRemoteStorageAsync() && _searchApiClient is not null)
+        if (await UseBackendApiAsync() && _searchApiClient is not null)
         {
             try
             {
                 return await _searchApiClient.SearchAsync(term);
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to local aggregation when the backend service is unavailable.
+                LastErrorMessage = "后端搜索失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"SearchAsync Error: {ex}");
             }
         }
 
-        var usingRemoteStorage = await UsesRemoteStorageAsync();
+        var usingRemoteStorage = await UseBackendApiAsync();
 
         var insurance = (await _documentCatalogService.GetInsuranceRecordsAsync())
             .Where(record => Contains(record.PolicyName, term) || Contains(record.Summary, term) || record.Tags.Any(tag => Contains(tag, term)))
@@ -97,7 +105,7 @@ public sealed class SearchIndexService
     private static string DecorateSummary(string summary, string? syncMessage, bool usingRemoteStorage)
         => !usingRemoteStorage || string.IsNullOrWhiteSpace(syncMessage) ? summary : $"{summary} · {syncMessage}";
 
-    private async Task<bool> UsesRemoteStorageAsync()
+    private async Task<bool> UseBackendApiAsync()
     {
         if (_storageConnectionProfileService is null)
         {
@@ -105,7 +113,11 @@ public sealed class SearchIndexService
         }
 
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
-        return profile.ValidationStatus == StorageValidationStatus.Valid && profile.IsActive;
+        var apiBaseUrl = string.IsNullOrWhiteSpace(profile.ApiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : profile.ApiBaseUrl;
+
+        return profile.IsActive && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out _);
     }
 }
 

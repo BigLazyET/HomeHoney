@@ -18,11 +18,10 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
     {
         var client = await _httpClientFactory.CreateAsync(backendBaseUrl, cancellationToken);
         var backendProfile = await GetRequiredAsync<BackendProfileDto>(client, "api/v1/admin/backend-profile", cancellationToken);
-        var downstream = await GetRequiredAsync<DownstreamSettingsDto>(client, "api/v1/admin/storage", cancellationToken);
-        return MapProfile(backendProfile, downstream);
+        return MapProfile(backendProfile);
     }
 
-    public async Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default)
+    public async Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default)
     {
         var client = await _httpClientFactory.CreateAsync(profile.ApiBaseUrl, cancellationToken);
 
@@ -40,41 +39,21 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
             return new(false, profile, backendResponse.Result.Message);
         }
 
-        var storageResponse = await PutAsync<DownstreamSettingsDto>(client, "api/v1/admin/storage", new UpdateDownstreamSettingsRequest
-        {
-            FileServiceBaseUrl = profile.FileServiceBaseUrl,
-            FileServiceApiPath = profile.FileServiceApiPath,
-            MongoDatabaseName = profile.MongoDatabaseName,
-            MongoConnectionString = mongoConnectionString,
-        }, cancellationToken);
-
-        if (!storageResponse.Result.IsSuccess || storageResponse.Data is null)
-        {
-            profile.ValidationStatus = StorageValidationStatus.Invalid;
-            profile.ValidationMessage = storageResponse.Result.Message;
-            profile.LastValidatedAt = DateTime.UtcNow;
-            return new(false, profile, storageResponse.Result.Message);
-        }
-
-        var savedProfile = MapProfile(backendResponse.Data, storageResponse.Data);
+        var savedProfile = MapProfile(backendResponse.Data);
         savedProfile.MongoConnectionStringSecretKey = profile.MongoConnectionStringSecretKey;
-        return new(true, savedProfile, storageResponse.Result.Message);
+        return new(true, savedProfile, backendResponse.Result.Message);
     }
 
-    private static StorageConnectionProfile MapProfile(BackendProfileDto backendProfile, DownstreamSettingsDto downstream)
+    private static StorageConnectionProfile MapProfile(BackendProfileDto backendProfile)
         => new()
         {
             ProfileId = backendProfile.ProfileId,
             DisplayName = backendProfile.DisplayName,
             ApiBaseUrl = backendProfile.ApiBaseUrl,
-            FileServiceBaseUrl = downstream.FileServiceBaseUrl,
-            FileServiceApiPath = downstream.FileServiceApiPath,
-            MongoDatabaseName = downstream.MongoDatabaseName,
-            MongoConnectionStringPreview = downstream.MongoConnectionStringPreview,
             IsActive = backendProfile.IsActive,
-            LastValidatedAt = downstream.LastValidatedAt ?? backendProfile.LastValidatedAt,
-            ValidationStatus = MapStatus(downstream.ValidationStatus),
-            ValidationMessage = downstream.ValidationMessage ?? backendProfile.ValidationMessage,
+            LastValidatedAt = backendProfile.LastValidatedAt,
+            ValidationStatus = MapStatus(backendProfile.ValidationStatus),
+            ValidationMessage = backendProfile.ValidationMessage,
         };
 
     private static StorageValidationStatus MapStatus(string? status)
@@ -142,28 +121,9 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
         public string? ValidationMessage { get; set; }
     }
 
-    private sealed class DownstreamSettingsDto
-    {
-        public string FileServiceBaseUrl { get; set; } = string.Empty;
-        public string FileServiceApiPath { get; set; } = string.Empty;
-        public string MongoDatabaseName { get; set; } = string.Empty;
-        public DateTime? LastValidatedAt { get; set; }
-        public string MongoConnectionStringPreview { get; set; } = string.Empty;
-        public string ValidationStatus { get; set; } = string.Empty;
-        public string? ValidationMessage { get; set; }
-    }
-
     private sealed class UpdateBackendProfileRequest
     {
         public string DisplayName { get; set; } = string.Empty;
         public string ApiBaseUrl { get; set; } = string.Empty;
-    }
-
-    private sealed class UpdateDownstreamSettingsRequest
-    {
-        public string FileServiceBaseUrl { get; set; } = string.Empty;
-        public string FileServiceApiPath { get; set; } = string.Empty;
-        public string MongoDatabaseName { get; set; } = string.Empty;
-        public string MongoConnectionString { get; set; } = string.Empty;
     }
 }

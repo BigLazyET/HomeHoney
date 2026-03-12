@@ -1,6 +1,7 @@
 @page "/reminders"
 @inject HomeHoney.Services.Reminders.ReminderCenterService ReminderCenterService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <div class="section-heading">
@@ -11,6 +12,11 @@
         </div>
         <a class="button-secondary" href="/search">进入全局搜索</a>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
 
     @if (_items.Count == 0)
     {
@@ -35,10 +41,12 @@
 
 @code {
     private IReadOnlyList<ReminderItem> _items = [];
+    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _items = await ReminderCenterService.GetUpcomingAsync();
+        _statusMessage = ReminderCenterService.LastErrorMessage;
     }
 
     private static string GetSource(ReminderSourceType sourceType) => sourceType switch

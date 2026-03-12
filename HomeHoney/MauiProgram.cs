@@ -38,13 +38,6 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IReminderApiClient, ReminderApiClient>();
 		builder.Services.AddSingleton<ISearchApiClient, SearchApiClient>();
 		builder.Services.AddSingleton<IPreferenceApiClient, PreferenceApiClient>();
-		builder.Services.AddSingleton<IMongoContextFactory, MongoContextFactory>();
-		builder.Services.AddSingleton<IFileStorageGateway, FileBrowserFileStorageGateway>();
-		builder.Services.AddSingleton<IDocumentMetadataRepository, DocumentMetadataRepository>();
-		builder.Services.AddSingleton<IBusinessAggregateRepository, BusinessAggregateRepository>();
-		builder.Services.AddSingleton<CollaborationRepository>();
-		builder.Services.AddSingleton<PreferenceRepository>();
-		builder.Services.AddSingleton<DocumentFileOrchestrator>();
 		builder.Services.AddSingleton<IAdminStorageApiClient, AdminStorageApiClient>();
 		builder.Services.AddSingleton<UserPreferenceService>();
 		builder.Services.AddSingleton<DocumentCatalogService>();

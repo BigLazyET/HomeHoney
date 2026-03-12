@@ -3,6 +3,8 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
+@using Microsoft.AspNetCore.Components.Forms
 
 @if (_record is null)
 {
@@ -11,6 +13,11 @@
 else
 {
     <section class="content-page detail-page">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <StatusBanner Message="@_statusMessage" IsError="@_isStatusError" />
+        }
+
         <PageHeader Eyebrow="保险详情"
                     Title="@_record.PolicyName"
                     Description="@_record.Summary"
@@ -37,8 +44,28 @@ else
                     <li>联系人：@_record.ContactName</li>
                     <li>联系电话：@_record.ContactPhone</li>
                     <li>附件数量：@_record.AttachmentCount</li>
+                    <li>文件状态：@GetFileStatusLabel(_record.PrimaryFile)</li>
                     <li>标签：@string.Join(" · ", _record.Tags)</li>
                 </ul>
+
+                <div class="detail-actions">
+                    <label class="button-secondary file-picker-button">
+                        <span>@(_selectedUploadName is null ? "选择附件" : $"已选择：{_selectedUploadName}")</span>
+                        <InputFile OnChange="HandleFileSelectedAsync" class="sr-only-file-input" />
+                    </label>
+                    <button class="button-primary"
+                            type="button"
+                            @onclick="HandleUploadAsync"
+                            disabled="@(_selectedFile is null || _isUploading)">
+                        @(_isUploading ? "上传中..." : "上传附件")
+                    </button>
+                    <button class="button-secondary"
+                            type="button"
+                            @onclick="HandleDownloadAsync"
+                            disabled="@(_record.PrimaryFile is null || _isDownloading)">
+                        @(_isDownloading ? "下载中..." : "下载附件")
+                    </button>
+                </div>
             </article>
         </div>
     </section>
@@ -49,10 +76,18 @@ else
     public Guid Id { get; set; }
 
     private InsuranceRecord? _record;
+    private string? _statusMessage;
+    private bool _isStatusError;
+    private IBrowserFile? _selectedFile;
+    private string? _selectedUploadName;
+    private bool _isUploading;
+    private bool _isDownloading;
 
     protected override async Task OnParametersSetAsync()
     {
         _record = await DocumentCatalogService.GetInsuranceRecordAsync(Id);
+        _statusMessage = DocumentCatalogService.LastErrorMessage;
+        _isStatusError = !string.IsNullOrWhiteSpace(_statusMessage);
     }
 
     private async Task HandleDeleteAsync()
@@ -68,9 +103,101 @@ else
             return;
         }
 
+        _statusMessage = null;
+        _isStatusError = false;
         await DocumentCatalogService.DeleteInsuranceRecordAsync(_record.Id);
+        if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
+        {
+            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            _isStatusError = true;
+            return;
+        }
+
         NavigationManager.NavigateTo(AppRoutes.InsuranceList);
     }
+
+    private Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _selectedFile = args.File;
+        _selectedUploadName = _selectedFile?.Name;
+        _statusMessage = _selectedFile is null ? null : $"已选择附件“{_selectedUploadName}”，点击上传后会同步到后端。";
+        _isStatusError = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleUploadAsync()
+    {
+        if (_record is null || _selectedFile is null)
+        {
+            _statusMessage = "请先选择要上传的附件。";
+            _isStatusError = true;
+            return;
+        }
+
+        _isUploading = true;
+        _statusMessage = null;
+        _isStatusError = false;
+
+        await using var stream = _selectedFile.OpenReadStream(25 * 1024 * 1024);
+        var result = await DocumentCatalogService.UploadInsuranceFileAsync(_record.Id, stream, _selectedFile.Name, _selectedFile.ContentType);
+
+        _isUploading = false;
+        if (!result.IsSuccess || !string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
+        {
+            _statusMessage = DocumentCatalogService.LastErrorMessage ?? result.Message;
+            _isStatusError = true;
+            return;
+        }
+
+        _selectedFile = null;
+        _selectedUploadName = null;
+        _record = await DocumentCatalogService.GetInsuranceRecordAsync(Id);
+        _statusMessage = result.Message;
+        _isStatusError = false;
+    }
+
+    private async Task HandleDownloadAsync()
+    {
+        if (_record is null || _record.PrimaryFile is null)
+        {
+            _statusMessage = "当前记录还没有可下载的附件。";
+            _isStatusError = true;
+            return;
+        }
+
+        _isDownloading = true;
+        _statusMessage = null;
+        _isStatusError = false;
+
+        var result = await DocumentCatalogService.DownloadInsuranceFileAsync(_record.Id);
+        _isDownloading = false;
+
+        if (!result.IsSuccess || result.Content is null)
+        {
+            _statusMessage = DocumentCatalogService.LastErrorMessage ?? result.Message;
+            _isStatusError = true;
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync(
+            "homeHoneyDownloads.saveFile",
+            result.FileName ?? _record.PrimaryFile.FileName,
+            result.ContentType ?? _record.PrimaryFile.ContentType,
+            Convert.ToBase64String(result.Content));
+
+        _statusMessage = result.Message;
+        _isStatusError = false;
+    }
+
+    private static string GetFileStatusLabel(FileResource? file)
+        => file?.AvailabilityStatus switch
+        {
+            FileAvailabilityStatus.Available => "可下载",
+            FileAvailabilityStatus.PendingUpload => "待上传",
+            FileAvailabilityStatus.Missing => "文件缺失",
+            FileAvailabilityStatus.SyncError => "同步失败",
+            _ => "未上传",
+        };
 
     private static string GetCategory(InsuranceCategory category) => category switch
     {

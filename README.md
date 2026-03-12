@@ -73,7 +73,7 @@ dotnet build -f net10.0-android -t:Run
 
 当前仓库正在切换到“移动端 → HomeHoney.Api → 外部文件服务 / MongoDB”的集成方案，默认按以下本地开发约定验证：
 
-- HomeHoney.Api 地址：`https://localhost:7080`
+- HomeHoney.Api 地址：`http://localhost:7080`
 - 文件服务基础地址：`http://localhost:8999`
 - 文件服务 API 路径：`/api`
 - MongoDB 连接串：`mongodb://et:.netcore@localhost:27017/homehoney?authSource=homehoney`
@@ -97,7 +97,7 @@ dotnet build -f net10.0-android -t:Run
 ### 建议验证
 
 1. 先确保本地 FileBrowser 和 MongoDB 服务已启动。
-2. 启动 `HomeHoney.Api`，确认其可访问 `https://localhost:7080/health`。
+2. 启动 `HomeHoney.Api`，确认其可访问 `http://localhost:7080/health`。
 3. 进入应用的“设置 → 外部存储”，先保存后端地址，再保存下游连接。
 4. 再验证资料列表、详情、上传/下载，以及非文件数据的新增和读取流程。
 5. 关闭任一远端服务后重新进入相关页面，确认页面显示明确失败反馈，而不是误显示为仍可正常读取远端数据。

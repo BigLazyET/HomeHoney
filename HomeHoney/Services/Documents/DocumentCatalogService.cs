@@ -1,19 +1,20 @@
 using HomeHoney.Models;
 using HomeHoney.Services.Navigation;
 using HomeHoney.Services.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace HomeHoney.Services.Documents;
 
 public sealed class DocumentCatalogService
 {
+    public string? LastErrorMessage { get; private set; }
+
     private readonly List<InsuranceRecord> _insuranceRecords;
     private readonly List<ManualRecord> _manualRecords;
     private readonly List<HouseholdMember> _members;
     private readonly List<Space> _spaces;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
-    private readonly IDocumentMetadataRepository? _documentMetadataRepository;
-    private readonly IBusinessAggregateRepository? _businessAggregateRepository;
-    private readonly DocumentFileOrchestrator? _documentFileOrchestrator;
     private readonly IDocumentApiClient? _documentApiClient;
 
     public DocumentCatalogService()
@@ -25,32 +26,18 @@ public sealed class DocumentCatalogService
         SeedLocalData();
     }
 
+    [ActivatorUtilitiesConstructor]
     public DocumentCatalogService(
         IStorageConnectionProfileService storageConnectionProfileService,
-        IDocumentMetadataRepository documentMetadataRepository,
-        IBusinessAggregateRepository businessAggregateRepository,
-        DocumentFileOrchestrator documentFileOrchestrator)
+        IDocumentApiClient documentApiClient)
     {
         _storageConnectionProfileService = storageConnectionProfileService;
-        _documentMetadataRepository = documentMetadataRepository;
-        _businessAggregateRepository = businessAggregateRepository;
-        _documentFileOrchestrator = documentFileOrchestrator;
+        _documentApiClient = documentApiClient;
         _insuranceRecords = [];
         _manualRecords = [];
         _members = [];
         _spaces = [];
         SeedLocalData();
-    }
-
-    public DocumentCatalogService(
-        IStorageConnectionProfileService storageConnectionProfileService,
-        IDocumentMetadataRepository documentMetadataRepository,
-        IBusinessAggregateRepository businessAggregateRepository,
-        DocumentFileOrchestrator documentFileOrchestrator,
-        IDocumentApiClient documentApiClient)
-        : this(storageConnectionProfileService, documentMetadataRepository, businessAggregateRepository, documentFileOrchestrator)
-    {
-        _documentApiClient = documentApiClient;
     }
 
     private void SeedLocalData()
@@ -178,6 +165,8 @@ public sealed class DocumentCatalogService
 
     public async Task<IReadOnlyList<InsuranceRecord>> GetInsuranceRecordsAsync()
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
@@ -186,24 +175,11 @@ public sealed class DocumentCatalogService
                 ReplaceLocal(_insuranceRecords, remote);
                 return remote;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
-            }
-        }
-
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            try
-            {
-                var remote = (await _documentMetadataRepository.GetInsuranceRecordsAsync()).OrderBy(record => record.ExpiryDate).ToList();
-                ReplaceLocal(_insuranceRecords, remote);
-                await SyncReferenceDataAsync();
-                return remote;
-            }
-            catch
-            {
-                // Fall back to the current in-memory view when the remote service is unavailable.
+                LastErrorMessage = "读取保险资料失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"GetInsuranceRecordsAsync Error: {ex}");
             }
         }
 
@@ -212,6 +188,8 @@ public sealed class DocumentCatalogService
 
     public async Task<IReadOnlyList<ManualRecord>> GetManualRecordsAsync()
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
@@ -220,24 +198,11 @@ public sealed class DocumentCatalogService
                 ReplaceLocal(_manualRecords, remote);
                 return remote;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
-            }
-        }
-
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            try
-            {
-                var remote = (await _documentMetadataRepository.GetManualRecordsAsync()).OrderBy(record => record.SpaceId).ToList();
-                ReplaceLocal(_manualRecords, remote);
-                await SyncReferenceDataAsync();
-                return remote;
-            }
-            catch
-            {
-                // Fall back to the current in-memory view when the remote service is unavailable.
+                LastErrorMessage = "读取说明书资料失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"GetManualRecordsAsync Error: {ex}");
             }
         }
 
@@ -252,6 +217,7 @@ public sealed class DocumentCatalogService
 
     public async Task SaveInsuranceRecordAsync(InsuranceRecord record)
     {
+        LastErrorMessage = null;
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
 
@@ -263,22 +229,21 @@ public sealed class DocumentCatalogService
                 UpsertLocal(_insuranceRecords, saved, item => item.Id == saved.Id);
                 return;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "保存保险资料失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"SaveInsuranceRecordAsync Error: {ex}");
             }
         }
 
         UpsertLocal(_insuranceRecords, record, item => item.Id == record.Id);
 
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            await _documentMetadataRepository.SaveInsuranceRecordAsync(record);
-        }
     }
 
     public async Task SaveManualRecordAsync(ManualRecord record)
     {
+        LastErrorMessage = null;
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
 
@@ -290,22 +255,21 @@ public sealed class DocumentCatalogService
                 UpsertLocal(_manualRecords, saved, item => item.Id == saved.Id);
                 return;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "保存说明书资料失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"SaveManualRecordAsync Error: {ex}");
             }
         }
 
         UpsertLocal(_manualRecords, record, item => item.Id == record.Id);
 
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            await _documentMetadataRepository.SaveManualRecordAsync(record);
-        }
     }
 
     public async Task<bool> DeleteInsuranceRecordAsync(Guid id)
     {
+        LastErrorMessage = null;
         var existing = _insuranceRecords.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
@@ -324,23 +288,21 @@ public sealed class DocumentCatalogService
 
                 return deleted;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "删除保险资料失败，后端未确认本次删除操作。";
+                Debug.WriteLine($"DeleteInsuranceRecordAsync Error: {ex}");
             }
         }
 
         _insuranceRecords.Remove(existing);
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            await _documentMetadataRepository.DeleteInsuranceRecordAsync(id);
-        }
-
         return true;
     }
 
     public async Task<bool> DeleteManualRecordAsync(Guid id)
     {
+        LastErrorMessage = null;
         var existing = _manualRecords.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
@@ -359,18 +321,15 @@ public sealed class DocumentCatalogService
 
                 return deleted;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "删除说明书资料失败，后端未确认本次删除操作。";
+                Debug.WriteLine($"DeleteManualRecordAsync Error: {ex}");
             }
         }
 
         _manualRecords.Remove(existing);
-        if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
-        {
-            await _documentMetadataRepository.DeleteManualRecordAsync(id);
-        }
-
         return true;
     }
 
@@ -397,6 +356,8 @@ public sealed class DocumentCatalogService
 
     public async Task<FileStorageResult> UploadInsuranceFileAsync(Guid id, Stream content, string fileName, string? contentType)
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
@@ -410,25 +371,21 @@ public sealed class DocumentCatalogService
 
                 return uploadResult;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "上传保险附件失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"UploadInsuranceFileAsync Error: {ex}");
             }
         }
 
-        var record = await GetInsuranceRecordAsync(id);
-        if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
-        {
-            return new(false, "当前未启用远端文件服务，无法上传文件。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
-        }
-
-        var result = await _documentFileOrchestrator.UploadInsuranceFileAsync(record, content, fileName, contentType);
-        await SaveInsuranceRecordAsync(record);
-        return result;
+        return new(false, "当前未启用后端 API 文件上传能力。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
     }
 
     public async Task<FileStorageResult> UploadManualFileAsync(Guid id, Stream content, string fileName, string? contentType)
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
@@ -442,79 +399,57 @@ public sealed class DocumentCatalogService
 
                 return uploadResult;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "上传说明书附件失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"UploadManualFileAsync Error: {ex}");
             }
         }
 
-        var record = await GetManualRecordAsync(id);
-        if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
-        {
-            return new(false, "当前未启用远端文件服务，无法上传文件。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
-        }
-
-        var result = await _documentFileOrchestrator.UploadManualFileAsync(record, content, fileName, contentType);
-        await SaveManualRecordAsync(record);
-        return result;
+        return new(false, "当前未启用后端 API 文件上传能力。", AvailabilityStatus: FileAvailabilityStatus.SyncError);
     }
 
     public async Task<FileDownloadResult> DownloadInsuranceFileAsync(Guid id)
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
             {
                 return await _documentApiClient.DownloadInsuranceFileAsync(id);
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "下载保险附件失败，请检查后端连接后重试。";
+                Debug.WriteLine($"DownloadInsuranceFileAsync Error: {ex}");
             }
         }
 
-        var record = await GetInsuranceRecordAsync(id);
-        if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
-        {
-            return new(false, "当前记录还没有可下载的附件。");
-        }
-
-        return await _documentFileOrchestrator.DownloadAsync(record.PrimaryFile);
+        return new(false, "当前未启用后端 API 文件下载能力。");
     }
 
     public async Task<FileDownloadResult> DownloadManualFileAsync(Guid id)
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _documentApiClient is not null)
         {
             try
             {
                 return await _documentApiClient.DownloadManualFileAsync(id);
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "下载说明书附件失败，请检查后端连接后重试。";
+                Debug.WriteLine($"DownloadManualFileAsync Error: {ex}");
             }
         }
 
-        var record = await GetManualRecordAsync(id);
-        if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
-        {
-            return new(false, "当前记录还没有可下载的附件。");
-        }
-
-        return await _documentFileOrchestrator.DownloadAsync(record.PrimaryFile);
-    }
-
-    private async Task<bool> UseRemoteStorageAsync()
-    {
-        if (_storageConnectionProfileService is null)
-        {
-            return false;
-        }
-
-        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
-        var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
-        return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
+        return new(false, "当前未启用后端 API 文件下载能力。");
     }
 
     private async Task<bool> UseBackendApiAsync()
@@ -525,29 +460,12 @@ public sealed class DocumentCatalogService
         }
 
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        var apiBaseUrl = string.IsNullOrWhiteSpace(profile.ApiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : profile.ApiBaseUrl;
+
         return profile.IsActive
-            && profile.ValidationStatus == StorageValidationStatus.Valid
-            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
-    }
-
-    private async Task SyncReferenceDataAsync()
-    {
-        if (_businessAggregateRepository is null || !await UseRemoteStorageAsync())
-        {
-            return;
-        }
-
-        var members = await _businessAggregateRepository.GetMembersAsync();
-        if (members.Count > 0)
-        {
-            ReplaceLocal(_members, members.ToList());
-        }
-
-        var spaces = await _businessAggregateRepository.GetSpacesAsync();
-        if (spaces.Count > 0)
-        {
-            ReplaceLocal(_spaces, spaces.ToList());
-        }
+            && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out _);
     }
 
     private static void ReplaceLocal<T>(List<T> target, List<T> source)

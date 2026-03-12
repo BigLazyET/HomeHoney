@@ -15,6 +15,11 @@
     <FilterBar SearchPlaceholder="搜索设备名称、品牌、标签"
                Filters="_filters" />
 
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
+
     @if (_records.Count == 0)
     {
         <EmptyState Icon="📘" Title="还没有说明书资料" Description="录入设备说明书后，可以按空间和品牌快速定位。" />
@@ -40,10 +45,12 @@
 @code {
     private IReadOnlyList<ManualRecord> _records = [];
     private readonly IReadOnlyList<string> _filters = ["全部", "按空间", "按品牌", "保修中", "即将到期"];
+    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _records = await DocumentCatalogService.GetManualRecordsAsync();
+        _statusMessage = DocumentCatalogService.LastErrorMessage;
     }
 
     private static IReadOnlyList<string> GetMeta(ManualRecord record) =>

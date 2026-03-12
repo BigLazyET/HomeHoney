@@ -1,6 +1,7 @@
 @page "/settings/notifications"
 @inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <PageHeader Eyebrow="提醒"
@@ -9,6 +10,11 @@
                 BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsNotifications)"
                 BackText="返回设置">
     </PageHeader>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="@_isError" />
+    }
 
     <div class="detail-card choice-list">
         <label class="toggle-item"><InputCheckbox @bind-Value="_settings.InsuranceEnabled" /> <span>保险到期与续保提醒</span></label>
@@ -24,6 +30,8 @@
 
 @code {
     private NotificationPreference _settings = new();
+    private string? _statusMessage;
+    private bool _isError;
 
     protected override void OnInitialized()
     {
@@ -37,5 +45,10 @@
         };
     }
 
-    private Task SaveAsync() => UserPreferenceService.UpdateNotificationSettingsAsync(_settings);
+    private async Task SaveAsync()
+    {
+        await UserPreferenceService.UpdateNotificationSettingsAsync(_settings);
+        _isError = !string.IsNullOrWhiteSpace(UserPreferenceService.LastRemoteSyncErrorMessage);
+        _statusMessage = UserPreferenceService.LastRemoteSyncErrorMessage ?? "设置已保存并同步到后端。";
+    }
 }

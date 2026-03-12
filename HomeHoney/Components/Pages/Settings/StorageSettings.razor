@@ -3,16 +3,14 @@
 
 <section class="content-page form-page">
     <PageHeader Eyebrow="后端服务"
-                Title="后端 API 与下游存储设置"
-                Description="移动端只连接 HomeHoney 后端，由后端统一管理文件服务与 MongoDB 的连接目标。"
+                Title="后端 API 设置"
+                Description="移动端只连接 HomeHoney 后端，文件服务与 MongoDB 下游目标统一由后端托管。"
                 BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsStorage)"
                 BackText="返回设置">
     </PageHeader>
 
     <div class="detail-card">
         <StorageConnectionForm Model="_profile"
-                               MongoConnectionString="_mongoConnectionString"
-                               MongoConnectionStringChanged="HandleMongoConnectionChanged"
                                OnSubmit="HandleSaveAsync"
                                StatusMessage="_statusMessage"
                                IsSuccess="_isSuccess" />
@@ -21,34 +19,26 @@
     <div class="detail-card">
         <h2>当前策略</h2>
         <ul>
-            <li>移动端只保存后端 API 地址，不再直接验证 FileBrowser 或 MongoDB</li>
-            <li>后端负责统一保存和验证下游文件服务与 MongoDB 配置</li>
-            <li>最近一次成功保存的后端与下游设置会在应用重启后继续生效</li>
+            <li>移动端仅允许维护后端 API 地址，不再提供下游存储编辑入口</li>
+            <li>应用内置安全默认后端地址；未手动覆盖时不会在界面中直接显示</li>
+            <li>最近一次成功保存的后端地址会在应用重启后继续生效</li>
         </ul>
     </div>
 </section>
 
 @code {
     private StorageConnectionProfile _profile = new();
-    private string _mongoConnectionString = string.Empty;
     private string? _statusMessage;
     private bool _isSuccess;
 
     protected override async Task OnInitializedAsync()
     {
         _profile = await StorageConnectionProfileService.GetActiveProfileAsync();
-        _mongoConnectionString = await StorageConnectionProfileService.GetMongoConnectionStringAsync() ?? string.Empty;
-    }
-
-    private Task HandleMongoConnectionChanged(string value)
-    {
-        _mongoConnectionString = value;
-        return Task.CompletedTask;
     }
 
     private async Task HandleSaveAsync()
     {
-        var result = await StorageConnectionProfileService.SaveProfileAsync(_profile, _mongoConnectionString);
+        var result = await StorageConnectionProfileService.SaveProfileAsync(_profile);
         _statusMessage = result.Message;
         _isSuccess = result.IsSuccess;
         _profile = result.Profile;

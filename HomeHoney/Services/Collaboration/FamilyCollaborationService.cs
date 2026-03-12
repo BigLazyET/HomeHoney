@@ -1,11 +1,15 @@
+using System.Diagnostics;
 using HomeHoney.Models;
 using HomeHoney.Services.Navigation;
 using HomeHoney.Services.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HomeHoney.Services.Collaboration;
 
 public sealed class FamilyCollaborationService
 {
+    public string? LastErrorMessage { get; private set; }
+
     private readonly List<FridgeNote> _fridgeNotes =
     [
         new()
@@ -53,7 +57,6 @@ public sealed class FamilyCollaborationService
         },
     ];
 
-    private readonly CollaborationRepository? _collaborationRepository;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
     private readonly ICollaborationApiClient? _collaborationApiClient;
 
@@ -61,25 +64,19 @@ public sealed class FamilyCollaborationService
     {
     }
 
+    [ActivatorUtilitiesConstructor]
     public FamilyCollaborationService(
-        CollaborationRepository collaborationRepository,
-        IStorageConnectionProfileService storageConnectionProfileService)
-    {
-        _collaborationRepository = collaborationRepository;
-        _storageConnectionProfileService = storageConnectionProfileService;
-    }
-
-    public FamilyCollaborationService(
-        CollaborationRepository collaborationRepository,
         IStorageConnectionProfileService storageConnectionProfileService,
         ICollaborationApiClient collaborationApiClient)
-        : this(collaborationRepository, storageConnectionProfileService)
     {
+        _storageConnectionProfileService = storageConnectionProfileService;
         _collaborationApiClient = collaborationApiClient;
     }
 
     public async Task<IReadOnlyList<FridgeNote>> GetFridgeNotesAsync()
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
         {
             try
@@ -88,23 +85,11 @@ public sealed class FamilyCollaborationService
                 ReplaceLocal(_fridgeNotes, remote);
                 return remote;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
-            }
-        }
-
-        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
-        {
-            try
-            {
-                var remote = (await _collaborationRepository.GetFridgeNotesAsync()).OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
-                ReplaceLocal(_fridgeNotes, remote);
-                return remote;
-            }
-            catch
-            {
-                // Fall back to the current in-memory view when the remote service is unavailable.
+                LastErrorMessage = "读取冰箱贴失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"GetFridgeNotesAsync Error: {ex}");
             }
         }
 
@@ -113,6 +98,8 @@ public sealed class FamilyCollaborationService
 
     public async Task<IReadOnlyList<Memo>> GetMemosAsync()
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
         {
             try
@@ -121,23 +108,11 @@ public sealed class FamilyCollaborationService
                 ReplaceLocal(_memos, remote);
                 return remote;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
-            }
-        }
-
-        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
-        {
-            try
-            {
-                var remote = (await _collaborationRepository.GetMemosAsync()).OrderBy(item => item.DueAt).ToList();
-                ReplaceLocal(_memos, remote);
-                return remote;
-            }
-            catch
-            {
-                // Fall back to the current in-memory view when the remote service is unavailable.
+                LastErrorMessage = "读取备忘录失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"GetMemosAsync Error: {ex}");
             }
         }
 
@@ -150,6 +125,7 @@ public sealed class FamilyCollaborationService
 
     public async Task SaveFridgeNoteAsync(FridgeNote fridgeNote)
     {
+        LastErrorMessage = null;
         fridgeNote.UpdatedAt = DateTime.Now;
 
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
@@ -169,9 +145,11 @@ public sealed class FamilyCollaborationService
 
                 return;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "保存冰箱贴失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"SaveFridgeNoteAsync Error: {ex}");
             }
         }
 
@@ -187,14 +165,11 @@ public sealed class FamilyCollaborationService
             _fridgeNotes[index] = fridgeNote;
         }
 
-        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
-        {
-            await _collaborationRepository.SaveFridgeNoteAsync(fridgeNote);
-        }
     }
 
     public async Task SaveMemoAsync(Memo memo)
     {
+        LastErrorMessage = null;
         memo.UpdatedAt = DateTime.Now;
 
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
@@ -214,9 +189,11 @@ public sealed class FamilyCollaborationService
 
                 return;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "保存备忘录失败，未能同步到后端，请稍后重试。";
+                Debug.WriteLine($"SaveMemoAsync Error: {ex}");
             }
         }
 
@@ -232,14 +209,11 @@ public sealed class FamilyCollaborationService
             _memos[index] = memo;
         }
 
-        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
-        {
-            await _collaborationRepository.SaveMemoAsync(memo);
-        }
     }
 
     public async Task<bool> DeleteFridgeNoteAsync(Guid id)
     {
+        LastErrorMessage = null;
         var existing = _fridgeNotes.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
@@ -258,18 +232,15 @@ public sealed class FamilyCollaborationService
 
                 return deleted;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "删除冰箱贴失败，后端未确认本次删除操作。";
+                Debug.WriteLine($"DeleteFridgeNoteAsync Error: {ex}");
             }
         }
 
         _fridgeNotes.Remove(existing);
-        if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
-        {
-            await _collaborationRepository.DeleteFridgeNoteAsync(id);
-        }
-
         return true;
     }
 
@@ -277,32 +248,31 @@ public sealed class FamilyCollaborationService
 
     public Memo CreateMemoTemplate() => new() { DueAt = DateTime.Today.AddDays(7).AddHours(9) };
 
-    public Task SetFridgeNoteCompletedAsync(Guid id, bool isCompleted)
+    public async Task SetFridgeNoteCompletedAsync(Guid id, bool isCompleted)
     {
         var note = _fridgeNotes.FirstOrDefault(item => item.Id == id);
         if (note is not null)
         {
             note.IsCompleted = isCompleted;
             note.UpdatedAt = DateTime.Now;
+            await SaveFridgeNoteAsync(note);
         }
-
-        return Task.CompletedTask;
     }
 
-    public Task SetMemoStatusAsync(Guid id, MemoStatus status)
+    public async Task SetMemoStatusAsync(Guid id, MemoStatus status)
     {
         var memo = _memos.FirstOrDefault(item => item.Id == id);
         if (memo is not null)
         {
             memo.Status = status;
             memo.UpdatedAt = DateTime.Now;
+            await SaveMemoAsync(memo);
         }
-
-        return Task.CompletedTask;
     }
 
     public async Task<bool> DeleteMemoAsync(Guid id)
     {
+        LastErrorMessage = null;
         var existing = _memos.FirstOrDefault(item => item.Id == id);
         if (existing is null)
         {
@@ -321,9 +291,11 @@ public sealed class FamilyCollaborationService
 
                 return deleted;
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to the current in-memory view when the backend service is unavailable.
+                LastErrorMessage = "删除备忘录失败，后端未确认本次删除操作。";
+                Debug.WriteLine($"DeleteMemoAsync Error: {ex}");
             }
         }
 
@@ -338,18 +310,6 @@ public sealed class FamilyCollaborationService
         return fridge.Concat(memos).OrderBy(item => item.DueAt ?? DateTime.MaxValue).Take(maxItems).ToList();
     }
 
-    private async Task<bool> UseRemoteStorageAsync()
-    {
-        if (_storageConnectionProfileService is null)
-        {
-            return false;
-        }
-
-        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
-        var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
-        return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
-    }
-
     private async Task<bool> UseBackendApiAsync()
     {
         if (_storageConnectionProfileService is null)
@@ -358,9 +318,12 @@ public sealed class FamilyCollaborationService
         }
 
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        var apiBaseUrl = string.IsNullOrWhiteSpace(profile.ApiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : profile.ApiBaseUrl;
+
         return profile.IsActive
-            && profile.ValidationStatus == StorageValidationStatus.Valid
-            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
+            && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out _);
     }
 
     private static void ReplaceLocal<T>(List<T> target, List<T> source)

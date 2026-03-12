@@ -13,7 +13,7 @@ public sealed class BackendServiceProfileDto
 
     public string DisplayName { get; set; } = "默认后端";
 
-    public string ApiBaseUrl { get; set; } = "https://localhost:7080";
+    public string ApiBaseUrl { get; set; } = "http://localhost:7080";
 
     public bool IsActive { get; set; } = true;
 

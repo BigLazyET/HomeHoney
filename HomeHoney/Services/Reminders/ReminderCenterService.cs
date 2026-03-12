@@ -3,11 +3,15 @@ using HomeHoney.Services.Collaboration;
 using HomeHoney.Services.Documents;
 using HomeHoney.Services.Navigation;
 using HomeHoney.Services.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace HomeHoney.Services.Reminders;
 
 public sealed class ReminderCenterService
 {
+    public string? LastErrorMessage { get; private set; }
+
     private readonly DocumentCatalogService _documentCatalogService;
     private readonly FamilyCollaborationService _familyCollaborationService;
     private readonly IReminderApiClient? _reminderApiClient;
@@ -19,6 +23,7 @@ public sealed class ReminderCenterService
         _familyCollaborationService = familyCollaborationService;
     }
 
+    [ActivatorUtilitiesConstructor]
     public ReminderCenterService(
         DocumentCatalogService documentCatalogService,
         FamilyCollaborationService familyCollaborationService,
@@ -32,15 +37,19 @@ public sealed class ReminderCenterService
 
     public async Task<IReadOnlyList<ReminderItem>> GetUpcomingAsync(int days = 30)
     {
+        LastErrorMessage = null;
+
         if (await UseBackendApiAsync() && _reminderApiClient is not null)
         {
             try
             {
                 return await _reminderApiClient.GetUpcomingAsync(days);
             }
-            catch
+            catch (Exception ex)
             {
                 // Fall back to local aggregation when the backend service is unavailable.
+                LastErrorMessage = "读取提醒中心失败，当前展示的是应用内现有内容。";
+                Debug.WriteLine($"GetUpcomingAsync Error: {ex}");
             }
         }
 
@@ -138,8 +147,11 @@ public sealed class ReminderCenterService
         }
 
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        var apiBaseUrl = string.IsNullOrWhiteSpace(profile.ApiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : profile.ApiBaseUrl;
+
         return profile.IsActive
-            && profile.ValidationStatus == StorageValidationStatus.Valid
-            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
+            && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out _);
     }
 }

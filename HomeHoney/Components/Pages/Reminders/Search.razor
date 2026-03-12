@@ -1,5 +1,6 @@
 @page "/search"
 @inject HomeHoney.Services.Search.SearchIndexService SearchIndexService
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <div class="section-heading">
@@ -14,6 +15,11 @@
         <InputText @bind-Value="_keyword" placeholder="例如：冰箱、医疗、接娃、采购" />
         <button class="button-primary" @onclick="RunSearchAsync">搜索</button>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
 
     @if (_hasSearched && _groups.Count == 0)
     {
@@ -45,10 +51,12 @@
     private string _keyword = string.Empty;
     private bool _hasSearched;
     private IReadOnlyList<HomeHoney.Services.Search.SearchGroupResult> _groups = [];
+    private string? _statusMessage;
 
     private async Task RunSearchAsync()
     {
         _groups = await SearchIndexService.SearchAsync(_keyword);
+        _statusMessage = SearchIndexService.LastErrorMessage;
         _hasSearched = true;
     }
 }

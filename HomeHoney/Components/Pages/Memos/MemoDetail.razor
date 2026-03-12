@@ -1,6 +1,7 @@
 @page "/memos/{Id:guid}"
 @inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 @if (_memo is null)
 {
@@ -9,6 +10,11 @@
 else
 {
     <section class="content-page detail-page">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <StatusBanner Message="@_statusMessage" IsError="false" />
+        }
+
         <div class="section-heading">
             <div>
                 <span class="page-eyebrow">家庭备忘录</span>
@@ -48,9 +54,11 @@ else
     public Guid Id { get; set; }
 
     private Memo? _memo;
+    private string? _statusMessage;
 
     protected override async Task OnParametersSetAsync()
     {
         _memo = await FamilyCollaborationService.GetMemoAsync(Id);
+        _statusMessage = FamilyCollaborationService.LastErrorMessage;
     }
 }

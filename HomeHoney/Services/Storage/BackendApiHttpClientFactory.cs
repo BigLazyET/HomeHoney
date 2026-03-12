@@ -1,14 +1,16 @@
+using HomeHoney.Models;
+
 namespace HomeHoney.Services.Storage;
 
 public sealed class BackendApiHttpClientFactory
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _prototypeClient;
     private readonly HomeHoney.Services.Preferences.UserPreferenceService _userPreferenceService;
     private readonly BackendApiOptions _options;
 
     public BackendApiHttpClientFactory(HttpClient httpClient, HomeHoney.Services.Preferences.UserPreferenceService userPreferenceService, BackendApiOptions options)
     {
-        _httpClient = httpClient;
+        _prototypeClient = httpClient;
         _userPreferenceService = userPreferenceService;
         _options = options;
     }
@@ -24,6 +26,11 @@ public sealed class BackendApiHttpClientFactory
             ? _userPreferenceService.GetPreferences().StoragePreference.ApiBaseUrl
             : backendBaseUrl;
 
+        if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+        {
+            configuredBaseUrl = StorageConnectionProfile.DefaultBackendApiBaseUrl;
+        }
+
         Uri? uri = null;
         if (Uri.TryCreate(configuredBaseUrl, UriKind.Absolute, out var configuredUri))
         {
@@ -34,11 +41,17 @@ public sealed class BackendApiHttpClientFactory
             uri = fallbackUri;
         }
 
-        if (uri is not null)
+        var client = new HttpClient
         {
-            _httpClient.BaseAddress = new Uri(uri.ToString().TrimEnd('/') + "/");
+            Timeout = _prototypeClient.Timeout,
+            BaseAddress = uri is null ? null : new Uri(uri.ToString().TrimEnd('/') + "/"),
+        };
+
+        foreach (var header in _prototypeClient.DefaultRequestHeaders)
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        return Task.FromResult(_httpClient);
+        return Task.FromResult(client);
     }
 }

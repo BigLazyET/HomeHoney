@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 @if (_isMissingRecord)
 {
@@ -22,6 +23,11 @@ else
                 <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
             }
         </PageHeader>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <StatusBanner Message="@_statusMessage" />
+        }
 
         <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
             <div class="form-grid">
@@ -74,6 +80,7 @@ else
 
     private ManualRecord _model = new();
     private bool _isMissingRecord;
+    private string? _statusMessage;
 
     private bool IsEditMode => Id.HasValue;
     private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.ManualEdit(id)) : AppRoutes.ManualsList;
@@ -98,11 +105,20 @@ else
         {
             _model = DocumentCatalogService.CreateManualTemplate();
         }
+
+        _statusMessage = DocumentCatalogService.LastErrorMessage;
     }
 
     private async Task HandleSubmitAsync()
     {
+        _statusMessage = null;
         await DocumentCatalogService.SaveManualRecordAsync(_model);
+        if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
+        {
+            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            return;
+        }
+
         NavigationManager.NavigateTo(AppRoutes.ManualDetail(_model.Id));
     }
 
@@ -119,7 +135,14 @@ else
             return;
         }
 
+        _statusMessage = null;
         await DocumentCatalogService.DeleteManualRecordAsync(_model.Id);
+        if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
+        {
+            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            return;
+        }
+
         NavigationManager.NavigateTo(AppRoutes.ManualsList);
     }
 }

@@ -27,7 +27,7 @@ public sealed class SecureSettingsStore
         => new()
         {
             DisplayName = GetValue(BackendDisplayNameKey, "默认后端"),
-            ApiBaseUrl = GetValue(BackendBaseUrlKey, "https://localhost:7080"),
+            ApiBaseUrl = GetValue(BackendBaseUrlKey, "http://localhost:7080"),
             IsActive = true,
             LastValidatedAt = GetDateTimeValue(BackendLastValidatedAtKey),
             ValidationStatus = GetValidationStatus(BackendValidationStatusKey),

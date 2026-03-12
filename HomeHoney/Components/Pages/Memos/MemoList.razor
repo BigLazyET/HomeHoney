@@ -1,6 +1,7 @@
 @page "/memos"
 @inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <div class="section-heading">
@@ -11,6 +12,11 @@
         </div>
         <a class="button-primary" href="/memos/new">新增备忘录</a>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
 
     @if (_memos.Count == 0)
     {
@@ -39,10 +45,12 @@
 
 @code {
     private IReadOnlyList<Memo> _memos = [];
+    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _memos = await FamilyCollaborationService.GetMemosAsync();
+        _statusMessage = FamilyCollaborationService.LastErrorMessage;
     }
 
     private static string GetImportance(MemoImportance importance) => importance switch

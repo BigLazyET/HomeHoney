@@ -25,7 +25,8 @@
 
 ### 后端服务
 
-- Backend Base URL: `https://localhost:7080` 或 `http://localhost:5080`
+- Backend Base URL: `http://localhost:7080` 或 `http://localhost:5080`
+- 移动端内置安全默认地址 `http://localhost:7080`，未手动覆盖时设置页不会直接显示该值
 
 ### 下游文件服务
 
@@ -43,9 +44,9 @@
 2. 启动 MongoDB
 3. 启动 `HomeHoney.Api`
   - `dotnet run --project HomeHoney.Api/HomeHoney.Api.csproj`
-  - 验证 `https://localhost:7080/health`
+  - 验证 `http://localhost:7080/health`
 4. 通过后端管理接口或配置文件确认下游存储配置有效
-5. 启动 `HomeHoney` 移动端，并仅配置后端 API 地址
+5. 启动 `HomeHoney` 移动端，并仅在需要时覆盖后端 API 地址
 
 ## 4.1 快速自动化验证
 
@@ -68,11 +69,12 @@
 ### 场景 A：移动端只连接后端
 
 1. 打开应用“设置”页
-2. 确认界面优先保存的是后端 API 地址，并由后端托管 FileBrowser/Mongo 下游连接
-3. 进入资料首页、提醒页、冰箱贴页
-4. 确认数据可以正常显示
+2. 确认界面只允许维护后端 API 地址，且不会直接显示内置默认地址
+3. 确认 FileBrowser/Mongo 下游连接只能由后端托管和维护
+4. 进入资料首页、提醒页、冰箱贴页
+5. 确认数据可以正常显示
 
-**预期结果**：移动端核心页面可正常使用，且客户端侧不再需要直连下游存储。
+**预期结果**：移动端核心页面可正常使用，客户端侧不再需要直连下游存储，也不再提供下游配置编辑入口。
 
 ### 场景 B：保险文件列表、上传、下载
 

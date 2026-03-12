@@ -1,6 +1,7 @@
 @page "/settings/privacy"
 @inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <PageHeader Eyebrow="隐私与安全"
@@ -10,6 +11,11 @@
                 BackText="返回设置">
         <a class="button-secondary" href="@AppRoutes.WelcomePreview">再次查看引导</a>
     </PageHeader>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="@_isError" />
+    }
 
     <div class="choice-list">
         @foreach (var mode in Enum.GetValues<PrivacyMode>())
@@ -26,7 +32,15 @@
 @code {
     private UserPreference Preferences => UserPreferenceService.GetPreferences();
 
-    private Task SetPrivacyAsync(PrivacyMode mode) => UserPreferenceService.SetPrivacyModeAsync(mode);
+    private string? _statusMessage;
+    private bool _isError;
+
+    private async Task SetPrivacyAsync(PrivacyMode mode)
+    {
+        await UserPreferenceService.SetPrivacyModeAsync(mode);
+        _isError = !string.IsNullOrWhiteSpace(UserPreferenceService.LastRemoteSyncErrorMessage);
+        _statusMessage = UserPreferenceService.LastRemoteSyncErrorMessage ?? "隐私策略已保存并同步到后端。";
+    }
 
     private static string GetLabel(PrivacyMode mode) => mode switch
     {

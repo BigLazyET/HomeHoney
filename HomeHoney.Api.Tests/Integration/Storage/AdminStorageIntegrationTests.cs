@@ -25,7 +25,7 @@ public sealed class AdminStorageIntegrationTests : IClassFixture<ApiWebApplicati
         using var profileResponse = await client.PutAsJsonAsync("/api/v1/admin/backend-profile", new UpdateBackendServiceProfileRequest
         {
             DisplayName = "家庭后端",
-            ApiBaseUrl = "https://localhost:7080"
+            ApiBaseUrl = "http://localhost:7080"
         });
 
         Assert.Equal(HttpStatusCode.OK, profileResponse.StatusCode);

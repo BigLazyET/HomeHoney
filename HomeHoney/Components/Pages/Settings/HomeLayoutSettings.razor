@@ -1,6 +1,7 @@
 @page "/settings/home-layout"
 @inject HomeHoney.Services.Preferences.UserPreferenceService UserPreferenceService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <PageHeader Eyebrow="首页布局"
@@ -9,6 +10,11 @@
                 BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsHomeLayout)"
                 BackText="返回设置">
     </PageHeader>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="@_isError" />
+    }
 
     <div class="choice-list">
         @foreach (var moduleType in Preferences.HomeModuleOrder)
@@ -32,11 +38,32 @@
 @code {
     private UserPreference Preferences => UserPreferenceService.GetPreferences();
 
-    private Task MoveUpAsync(HomeModuleType moduleType) => UserPreferenceService.MoveModuleUpAsync(moduleType);
+    private string? _statusMessage;
+    private bool _isError;
 
-    private Task MoveDownAsync(HomeModuleType moduleType) => UserPreferenceService.MoveModuleDownAsync(moduleType);
+    private async Task MoveUpAsync(HomeModuleType moduleType)
+    {
+        await UserPreferenceService.MoveModuleUpAsync(moduleType);
+        UpdateStatus("首页模块顺序已更新并同步到后端。");
+    }
 
-    private Task ToggleVisibilityAsync(HomeModuleType moduleType, bool isHidden) => UserPreferenceService.SetModuleVisibilityAsync(moduleType, isVisible: isHidden);
+    private async Task MoveDownAsync(HomeModuleType moduleType)
+    {
+        await UserPreferenceService.MoveModuleDownAsync(moduleType);
+        UpdateStatus("首页模块顺序已更新并同步到后端。");
+    }
+
+    private async Task ToggleVisibilityAsync(HomeModuleType moduleType, bool isHidden)
+    {
+        await UserPreferenceService.SetModuleVisibilityAsync(moduleType, isVisible: isHidden);
+        UpdateStatus("首页模块可见性已更新并同步到后端。");
+    }
+
+    private void UpdateStatus(string successMessage)
+    {
+        _isError = !string.IsNullOrWhiteSpace(UserPreferenceService.LastRemoteSyncErrorMessage);
+        _statusMessage = UserPreferenceService.LastRemoteSyncErrorMessage ?? successMessage;
+    }
 
     private static string GetLabel(HomeModuleType type) => type switch
     {

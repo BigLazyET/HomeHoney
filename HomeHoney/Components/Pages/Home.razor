@@ -3,6 +3,7 @@
 @inject FamilyCollaborationService FamilyCollaborationService
 @inject ReminderCenterService ReminderCenterService
 @inject UserPreferenceService UserPreferenceService
+@using HomeHoney.Components.Shared
 
 <section class="content-page home-dashboard">
     <div class="section-heading">
@@ -35,6 +36,11 @@
                             <a href="@AppRoutes.Reminders">查看全部</a>
                         </div>
 
+                        @if (!string.IsNullOrWhiteSpace(_reminderStatusMessage))
+                        {
+                            <StatusBanner Message="@_reminderStatusMessage" IsError="false" />
+                        }
+
                         @if (_upcomingReminders.Count == 0)
                         {
                             <EmptyState Icon="⏰" Title="近期没有紧急事项" Description="录入保单、说明书和家庭待办后，这里会自动显示未来 30 天的重要提醒。" />
@@ -63,6 +69,11 @@
                             <a href="@AppRoutes.Documents">进入资料模块</a>
                         </div>
 
+                        @if (!string.IsNullOrWhiteSpace(_documentStatusMessage))
+                        {
+                            <StatusBanner Message="@_documentStatusMessage" IsError="false" />
+                        }
+
                         @if (_recentDocuments.Count == 0)
                         {
                             <EmptyState Icon="🗂️" Title="最近资料暂时为空" Description="删除旧资料后，这里会在你新增或更新保险、说明书时自动刷新。" />
@@ -89,6 +100,11 @@
                             <h2>家庭留言摘要</h2>
                             <a href="@AppRoutes.FridgeNotes">查看冰箱贴</a>
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_collaborationStatusMessage))
+                        {
+                            <StatusBanner Message="@_collaborationStatusMessage" IsError="false" />
+                        }
 
                         @if (_collaborationSummaries.Count == 0)
                         {
@@ -140,6 +156,9 @@
     private IReadOnlyList<DocumentSummary> _recentDocuments = [];
     private IReadOnlyList<ReminderItem> _upcomingReminders = [];
     private IReadOnlyList<CollaborationSummary> _collaborationSummaries = [];
+    private string? _documentStatusMessage;
+    private string? _reminderStatusMessage;
+    private string? _collaborationStatusMessage;
 
     private readonly IReadOnlyList<QuickActionItem> _quickActions =
     [
@@ -151,9 +170,22 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await DocumentCatalogService.GetInsuranceRecordsAsync();
+        var insuranceStatusMessage = DocumentCatalogService.LastErrorMessage;
+        await DocumentCatalogService.GetManualRecordsAsync();
+        var manualStatusMessage = DocumentCatalogService.LastErrorMessage;
         _recentDocuments = DocumentCatalogService.GetRecentDocuments().ToList();
+        _documentStatusMessage = MergeStatusMessages(insuranceStatusMessage, manualStatusMessage);
+
         _upcomingReminders = await ReminderCenterService.GetUpcomingAsync();
+        _reminderStatusMessage = ReminderCenterService.LastErrorMessage;
+
+        await FamilyCollaborationService.GetFridgeNotesAsync();
+        var fridgeStatusMessage = FamilyCollaborationService.LastErrorMessage;
+        await FamilyCollaborationService.GetMemosAsync();
+        var memoStatusMessage = FamilyCollaborationService.LastErrorMessage;
         _collaborationSummaries = FamilyCollaborationService.GetRecentMessages().ToList();
+        _collaborationStatusMessage = MergeStatusMessages(fridgeStatusMessage, memoStatusMessage);
     }
 
     private bool IsVisible(HomeModuleType moduleType) => !UserPreferenceService.GetPreferences().HiddenHomeModules.Contains(moduleType);
@@ -170,4 +202,10 @@
         $"最近更新：{summary.UpdatedAt:MM-dd HH:mm}",
         $"标签：{string.Join(" · ", summary.Tags)}",
     ];
+
+    private static string? MergeStatusMessages(params string?[] messages)
+    {
+        var materialized = messages.Where(message => !string.IsNullOrWhiteSpace(message)).Distinct().ToList();
+        return materialized.Count == 0 ? null : string.Join(" ", materialized);
+    }
 }

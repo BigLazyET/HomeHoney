@@ -9,11 +9,13 @@ public enum StorageValidationStatus
 
 public sealed class StorageConnectionProfile
 {
+    public const string DefaultBackendApiBaseUrl = "http://localhost:7080";
+
     public Guid ProfileId { get; set; } = Guid.NewGuid();
 
     public string DisplayName { get; set; } = "默认后端";
 
-    public string ApiBaseUrl { get; set; } = "https://localhost:7080";
+    public string ApiBaseUrl { get; set; } = DefaultBackendApiBaseUrl;
 
     public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
 

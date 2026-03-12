@@ -1,6 +1,7 @@
 using HomeHoney.Models;
 using HomeHoney.Services.Diagnostics;
 using HomeHoney.Services.Storage;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace HomeHoney.Services.Preferences;
@@ -10,6 +11,8 @@ public sealed class UserPreferenceService
     private const string PreferenceStorageKey = "homehoney.user-preferences";
     private readonly UserPreference _preferences = new();
     private readonly IServiceProvider? _serviceProvider;
+
+    public string? LastRemoteSyncErrorMessage { get; private set; }
 
     public event Action? Changed;
 
@@ -129,6 +132,7 @@ public sealed class UserPreferenceService
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"Load Error: {ex}");
             RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }
@@ -142,6 +146,7 @@ public sealed class UserPreferenceService
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"Save Error: {ex}");
             RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }
@@ -150,18 +155,17 @@ public sealed class UserPreferenceService
     {
         try
         {
+            LastRemoteSyncErrorMessage = null;
             var preferenceApiClient = _serviceProvider?.GetService(typeof(IPreferenceApiClient)) as IPreferenceApiClient;
             if (preferenceApiClient is not null)
             {
                 preferenceApiClient.UpdateAsync(_preferences).GetAwaiter().GetResult();
-                return;
             }
-
-            var preferenceRepository = _serviceProvider?.GetService(typeof(PreferenceRepository)) as PreferenceRepository;
-            preferenceRepository?.SaveUserPreferenceAsync(_preferences).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
+            LastRemoteSyncErrorMessage = "设置已保存到本地，但同步后端失败，请稍后重试。";
+            Debug.WriteLine($"SaveRemote Error: {ex}");
             RuntimeDiagnostics.Record(nameof(UserPreferenceService), ex);
         }
     }

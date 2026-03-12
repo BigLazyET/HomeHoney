@@ -12,9 +12,7 @@ public interface IStorageConnectionProfileService
 
     Task<string?> GetBackendBaseUrlAsync(CancellationToken cancellationToken = default);
 
-    Task<string?> GetMongoConnectionStringAsync(CancellationToken cancellationToken = default);
+    Task<StorageValidationResult> ValidateProfileAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default);
 
-    Task<StorageValidationResult> ValidateProfileAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default);
-
-    Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default);
+    Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default);
 }

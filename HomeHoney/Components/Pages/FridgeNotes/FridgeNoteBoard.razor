@@ -1,6 +1,7 @@
 @page "/fridge-notes"
 @inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page">
     <div class="section-heading">
@@ -11,6 +12,11 @@
         </div>
         <a class="button-primary" href="@AppRoutes.FridgeNoteNew">新增冰箱贴</a>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" IsError="false" />
+    }
 
     @if (_notes.Count == 0)
     {
@@ -43,10 +49,12 @@
 
 @code {
     private IReadOnlyList<FridgeNote> _notes = [];
+    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
         _notes = await FamilyCollaborationService.GetFridgeNotesAsync();
+        _statusMessage = FamilyCollaborationService.LastErrorMessage;
     }
 
     private static string GetPriority(NotePriority priority) => priority switch

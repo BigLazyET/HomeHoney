@@ -2,29 +2,10 @@
 
 <EditForm Model="Model" OnValidSubmit="SubmitAsync">
     <div class="form-grid">
-        <label>
-            <span>配置名称</span>
-            <InputText @bind-Value="Model.DisplayName" />
-        </label>
-        <label>
-            <span>后端 API 地址</span>
-            <InputText @bind-Value="Model.ApiBaseUrl" />
-        </label>
-        <label>
-            <span>下游文件服务地址</span>
-            <InputText @bind-Value="Model.FileServiceBaseUrl" />
-        </label>
-        <label>
-            <span>下游文件服务 API 路径</span>
-            <InputText @bind-Value="Model.FileServiceApiPath" />
-        </label>
-        <label>
-            <span>下游 Mongo 数据库名</span>
-            <InputText @bind-Value="Model.MongoDatabaseName" />
-        </label>
         <label class="form-grid-span-2">
-            <span>下游 Mongo 连接字符串</span>
-            <InputText @bind-Value="MongoConnectionStringProxy" @bind-Value:event="oninput" />
+            <span>后端 API 地址</span>
+            <InputText @bind-Value="ApiBaseUrlProxy" @bind-Value:event="oninput" autocomplete="off" placeholder="留空时使用应用内安全默认地址" />
+            <small>移动端不会显示内置默认地址；只有手动覆盖后才会展示当前值。</small>
         </label>
     </div>
 
@@ -45,12 +26,6 @@
     public StorageConnectionProfile Model { get; set; } = new();
 
     [Parameter]
-    public string MongoConnectionString { get; set; } = string.Empty;
-
-    [Parameter]
-    public EventCallback<string> MongoConnectionStringChanged { get; set; }
-
-    [Parameter]
     public EventCallback OnSubmit { get; set; }
 
     [Parameter]
@@ -64,17 +39,16 @@
 
     private Task SubmitAsync() => OnSubmit.InvokeAsync();
 
-    private string MongoConnectionStringProxy
+    private string ApiBaseUrlProxy
     {
-        get => MongoConnectionString;
+        get => string.Equals(Model.ApiBaseUrl, StorageConnectionProfile.DefaultBackendApiBaseUrl, StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : Model.ApiBaseUrl;
         set
         {
-            if (string.Equals(MongoConnectionString, value, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _ = MongoConnectionStringChanged.InvokeAsync(value);
+            Model.ApiBaseUrl = string.IsNullOrWhiteSpace(value)
+                ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+                : value.Trim();
         }
     }
 }

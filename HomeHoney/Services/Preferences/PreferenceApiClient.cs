@@ -68,7 +68,7 @@ public sealed class PreferenceApiClient : IPreferenceApiClient
     private sealed class StoragePreferenceDto
     {
         public string DisplayName { get; set; } = "默认后端";
-        public string ApiBaseUrl { get; set; } = "https://localhost:7080";
+        public string ApiBaseUrl { get; set; } = "http://localhost:7080";
         public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
         public string FileServiceApiPath { get; set; } = "/api";
         public string MongoConnectionStringSecretKey { get; set; } = "storage.mongo.connection";

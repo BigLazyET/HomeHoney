@@ -3,6 +3,7 @@
 @inject HomeHoney.Services.Collaboration.FamilyCollaborationService FamilyCollaborationService
 @inject NavigationManager NavigationManager
 @using HomeHoney.Models
+@using HomeHoney.Components.Shared
 
 <section class="content-page form-page">
     <div class="section-heading">
@@ -12,6 +13,11 @@
             <p>适合记录较长内容、长期计划和需要归档的家庭规则。</p>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <StatusBanner Message="@_statusMessage" />
+    }
 
     <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
         <div class="form-grid">
@@ -69,6 +75,7 @@
 
     private Memo _model = new();
     private DateTime _dueDate = DateTime.Today.AddDays(7);
+    private string? _statusMessage;
 
     private bool IsEditMode => Id.HasValue;
 
@@ -84,12 +91,20 @@
         }
 
         _dueDate = _model.DueAt ?? DateTime.Today.AddDays(7);
+        _statusMessage = FamilyCollaborationService.LastErrorMessage;
     }
 
     private async Task HandleSubmitAsync()
     {
+        _statusMessage = null;
         _model.DueAt = _dueDate;
         await FamilyCollaborationService.SaveMemoAsync(_model);
+        if (!string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage))
+        {
+            _statusMessage = FamilyCollaborationService.LastErrorMessage;
+            return;
+        }
+
         NavigationManager.NavigateTo($"/memos/{_model.Id}");
     }
 }

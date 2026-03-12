@@ -1,4 +1,5 @@
 using HomeHoney.Models;
+using System.Diagnostics;
 
 namespace HomeHoney.Services.Storage;
 
@@ -11,21 +12,15 @@ public sealed class StorageConfigurationValidator
         _httpClient = httpClient;
     }
 
-    public async Task<StorageValidationResult> ValidateAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default)
+    public async Task<StorageValidationResult> ValidateAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default)
     {
-        if (!Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out var backendUri))
+        var effectiveBaseUrl = string.IsNullOrWhiteSpace(profile.ApiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : profile.ApiBaseUrl;
+
+        if (!Uri.TryCreate(effectiveBaseUrl, UriKind.Absolute, out var backendUri))
         {
             return new(false, "后端 API 地址不是有效的绝对地址。");
-        }
-
-        if (string.IsNullOrWhiteSpace(profile.DisplayName))
-        {
-            return new(false, "配置名称不能为空。");
-        }
-
-        if (string.IsNullOrWhiteSpace(profile.MongoDatabaseName))
-        {
-            return new(false, "Mongo 数据库名不能为空。");
         }
 
         try
@@ -39,6 +34,7 @@ public sealed class StorageConfigurationValidator
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"ValidateAsync Error: {ex}");
             return new(false, $"无法连接后端服务：{ex.Message}");
         }
 

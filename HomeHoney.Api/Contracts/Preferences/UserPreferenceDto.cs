@@ -17,7 +17,7 @@ public sealed class StoragePreferenceDto
 {
     public string DisplayName { get; set; } = "默认后端";
 
-    public string ApiBaseUrl { get; set; } = "https://localhost:7080";
+    public string ApiBaseUrl { get; set; } = "http://localhost:7080";
 
     public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
 

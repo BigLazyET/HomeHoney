@@ -1,20 +1,18 @@
 using HomeHoney.Models;
 using HomeHoney.Services.Preferences;
-using MongoDB.Driver;
+using System.Diagnostics;
 
 namespace HomeHoney.Services.Storage;
 
 public sealed class StorageConnectionProfileService : IStorageConnectionProfileService
 {
     private readonly UserPreferenceService _userPreferenceService;
-    private readonly ISecretStore _secretStore;
     private readonly StorageConfigurationValidator _validator;
     private readonly IAdminStorageApiClient _adminStorageApiClient;
 
-    public StorageConnectionProfileService(UserPreferenceService userPreferenceService, ISecretStore secretStore, StorageConfigurationValidator validator, IAdminStorageApiClient adminStorageApiClient)
+    public StorageConnectionProfileService(UserPreferenceService userPreferenceService, StorageConfigurationValidator validator, IAdminStorageApiClient adminStorageApiClient)
     {
         _userPreferenceService = userPreferenceService;
-        _secretStore = secretStore;
         _validator = validator;
         _adminStorageApiClient = adminStorageApiClient;
     }
@@ -25,7 +23,7 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
         var profile = new StorageConnectionProfile
         {
             DisplayName = preference.DisplayName,
-            ApiBaseUrl = preference.ApiBaseUrl,
+            ApiBaseUrl = NormalizeApiBaseUrl(preference.ApiBaseUrl),
             FileServiceBaseUrl = preference.FileServiceBaseUrl,
             FileServiceApiPath = preference.FileServiceApiPath,
             MongoConnectionStringSecretKey = preference.MongoConnectionStringSecretKey,
@@ -46,24 +44,23 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
         {
             return await _adminStorageApiClient.GetProfileAsync(profile.ApiBaseUrl, cancellationToken);
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"GetActiveProfileAsync Error: {ex}");
             return profile;
         }
     }
 
     public Task<string?> GetBackendBaseUrlAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult<string?>(_userPreferenceService.GetPreferences().StoragePreference.ApiBaseUrl);
+        => Task.FromResult<string?>(NormalizeApiBaseUrl(_userPreferenceService.GetPreferences().StoragePreference.ApiBaseUrl));
 
-    public Task<string?> GetMongoConnectionStringAsync(CancellationToken cancellationToken = default)
-        => _secretStore.GetSecretAsync(_userPreferenceService.GetPreferences().StoragePreference.MongoConnectionStringSecretKey, cancellationToken);
+    public Task<StorageValidationResult> ValidateProfileAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default)
+        => _validator.ValidateAsync(NormalizeProfile(profile), cancellationToken);
 
-    public Task<StorageValidationResult> ValidateProfileAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default)
-        => _validator.ValidateAsync(profile, mongoConnectionString, cancellationToken);
-
-    public async Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, string mongoConnectionString, CancellationToken cancellationToken = default)
+    public async Task<StorageProfileSaveResult> SaveProfileAsync(StorageConnectionProfile profile, CancellationToken cancellationToken = default)
     {
-        var validation = await ValidateProfileAsync(profile, mongoConnectionString, cancellationToken);
+        profile = NormalizeProfile(profile);
+        var validation = await ValidateProfileAsync(profile, cancellationToken);
         profile.LastValidatedAt = DateTime.UtcNow;
         profile.ValidationStatus = validation.IsValid ? StorageValidationStatus.Valid : StorageValidationStatus.Invalid;
         profile.ValidationMessage = validation.Message;
@@ -73,7 +70,7 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
             return new(false, profile, validation.Message);
         }
 
-        var remoteSave = await _adminStorageApiClient.SaveProfileAsync(profile, mongoConnectionString, cancellationToken);
+        var remoteSave = await _adminStorageApiClient.SaveProfileAsync(profile, cancellationToken);
         profile = remoteSave.Profile;
         profile.LastValidatedAt ??= DateTime.UtcNow;
 
@@ -82,22 +79,16 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
             return remoteSave;
         }
 
-        var secretKey = string.IsNullOrWhiteSpace(profile.MongoConnectionStringSecretKey)
-            ? "storage.mongo.connection"
-            : profile.MongoConnectionStringSecretKey;
-
-        profile.MongoConnectionStringSecretKey = secretKey;
-        profile.MongoConnectionStringPreview = MaskConnectionString(mongoConnectionString);
-        await _secretStore.SetSecretAsync(secretKey, mongoConnectionString, cancellationToken);
+        var current = _userPreferenceService.GetPreferences().StoragePreference;
         await _userPreferenceService.UpdateStoragePreferenceAsync(new StoragePreference
         {
             DisplayName = profile.DisplayName,
             ApiBaseUrl = profile.ApiBaseUrl,
-            FileServiceBaseUrl = profile.FileServiceBaseUrl,
-            FileServiceApiPath = profile.FileServiceApiPath,
-            MongoConnectionStringSecretKey = profile.MongoConnectionStringSecretKey,
-            MongoConnectionStringPreview = profile.MongoConnectionStringPreview,
-            MongoDatabaseName = profile.MongoDatabaseName,
+            FileServiceBaseUrl = current.FileServiceBaseUrl,
+            FileServiceApiPath = current.FileServiceApiPath,
+            MongoConnectionStringSecretKey = current.MongoConnectionStringSecretKey,
+            MongoConnectionStringPreview = current.MongoConnectionStringPreview,
+            MongoDatabaseName = current.MongoDatabaseName,
             IsActive = true,
             LastValidatedAt = profile.LastValidatedAt,
             ValidationStatus = profile.ValidationStatus,
@@ -107,18 +98,15 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
         return new(true, profile, remoteSave.Message);
     }
 
-    private static string MaskConnectionString(string connectionString)
+    private static StorageConnectionProfile NormalizeProfile(StorageConnectionProfile profile)
     {
-        try
-        {
-            var mongoUrl = MongoUrl.Create(connectionString);
-            var credentials = mongoUrl.Username is null ? string.Empty : $"{mongoUrl.Username}:***@";
-            var hosts = string.Join(",", mongoUrl.Servers.Select(server => $"{server.Host}:{server.Port}"));
-            return $"mongodb://{credentials}{hosts}/{mongoUrl.DatabaseName ?? string.Empty}";
-        }
-        catch
-        {
-            return "mongodb://***";
-        }
+        profile.DisplayName = string.IsNullOrWhiteSpace(profile.DisplayName) ? "默认后端" : profile.DisplayName.Trim();
+        profile.ApiBaseUrl = NormalizeApiBaseUrl(profile.ApiBaseUrl);
+        return profile;
     }
+
+    private static string NormalizeApiBaseUrl(string? apiBaseUrl)
+        => string.IsNullOrWhiteSpace(apiBaseUrl)
+            ? StorageConnectionProfile.DefaultBackendApiBaseUrl
+            : apiBaseUrl.Trim();
 }
