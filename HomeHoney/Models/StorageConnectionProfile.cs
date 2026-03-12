@@ -11,7 +11,9 @@ public sealed class StorageConnectionProfile
 {
     public Guid ProfileId { get; set; } = Guid.NewGuid();
 
-    public string DisplayName { get; set; } = "默认连接";
+    public string DisplayName { get; set; } = "默认后端";
+
+    public string ApiBaseUrl { get; set; } = "https://localhost:7080";
 
     public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
 
@@ -31,5 +33,5 @@ public sealed class StorageConnectionProfile
 
     public string? ValidationMessage { get; set; }
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(FileServiceBaseUrl) && !string.IsNullOrWhiteSpace(MongoConnectionStringSecretKey);
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(ApiBaseUrl);
 }

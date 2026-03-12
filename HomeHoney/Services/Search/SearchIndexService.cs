@@ -11,6 +11,7 @@ public sealed class SearchIndexService
     private readonly DocumentCatalogService _documentCatalogService;
     private readonly FamilyCollaborationService _familyCollaborationService;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
+    private readonly ISearchApiClient? _searchApiClient;
 
     public SearchIndexService(DocumentCatalogService documentCatalogService, FamilyCollaborationService familyCollaborationService)
     {
@@ -25,6 +26,16 @@ public sealed class SearchIndexService
         _storageConnectionProfileService = storageConnectionProfileService;
     }
 
+    public SearchIndexService(
+        DocumentCatalogService documentCatalogService,
+        FamilyCollaborationService familyCollaborationService,
+        IStorageConnectionProfileService storageConnectionProfileService,
+        ISearchApiClient searchApiClient)
+        : this(documentCatalogService, familyCollaborationService, storageConnectionProfileService)
+    {
+        _searchApiClient = searchApiClient;
+    }
+
     public async Task<IReadOnlyList<SearchGroupResult>> SearchAsync(string? keyword)
     {
         keyword ??= string.Empty;
@@ -32,6 +43,18 @@ public sealed class SearchIndexService
         if (string.IsNullOrWhiteSpace(term))
         {
             return [];
+        }
+
+        if (await UsesRemoteStorageAsync() && _searchApiClient is not null)
+        {
+            try
+            {
+                return await _searchApiClient.SearchAsync(term);
+            }
+            catch
+            {
+                // Fall back to local aggregation when the backend service is unavailable.
+            }
         }
 
         var usingRemoteStorage = await UsesRemoteStorageAsync();

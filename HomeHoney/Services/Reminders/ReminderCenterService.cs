@@ -10,6 +10,8 @@ public sealed class ReminderCenterService
 {
     private readonly DocumentCatalogService _documentCatalogService;
     private readonly FamilyCollaborationService _familyCollaborationService;
+    private readonly IReminderApiClient? _reminderApiClient;
+    private readonly Storage.IStorageConnectionProfileService? _storageConnectionProfileService;
 
     public ReminderCenterService(DocumentCatalogService documentCatalogService, FamilyCollaborationService familyCollaborationService)
     {
@@ -17,8 +19,31 @@ public sealed class ReminderCenterService
         _familyCollaborationService = familyCollaborationService;
     }
 
+    public ReminderCenterService(
+        DocumentCatalogService documentCatalogService,
+        FamilyCollaborationService familyCollaborationService,
+        IReminderApiClient reminderApiClient,
+        Storage.IStorageConnectionProfileService storageConnectionProfileService)
+        : this(documentCatalogService, familyCollaborationService)
+    {
+        _reminderApiClient = reminderApiClient;
+        _storageConnectionProfileService = storageConnectionProfileService;
+    }
+
     public async Task<IReadOnlyList<ReminderItem>> GetUpcomingAsync(int days = 30)
     {
+        if (await UseBackendApiAsync() && _reminderApiClient is not null)
+        {
+            try
+            {
+                return await _reminderApiClient.GetUpcomingAsync(days);
+            }
+            catch
+            {
+                // Fall back to local aggregation when the backend service is unavailable.
+            }
+        }
+
         var threshold = DateTime.Today.AddDays(days);
         var reminders = new List<ReminderItem>();
 
@@ -103,5 +128,18 @@ public sealed class ReminderCenterService
             .Where(item => item.DueAt <= threshold));
 
         return reminders.OrderBy(item => item.DueAt).ToList();
+    }
+
+    private async Task<bool> UseBackendApiAsync()
+    {
+        if (_storageConnectionProfileService is null)
+        {
+            return false;
+        }
+
+        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        return profile.IsActive
+            && profile.ValidationStatus == StorageValidationStatus.Valid
+            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
     }
 }

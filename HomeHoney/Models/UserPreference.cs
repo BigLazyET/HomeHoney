@@ -27,7 +27,9 @@ public sealed class NotificationPreference
 
 public sealed class StoragePreference
 {
-    public string DisplayName { get; set; } = "默认连接";
+    public string DisplayName { get; set; } = "默认后端";
+
+    public string ApiBaseUrl { get; set; } = "https://localhost:7080";
 
     public string FileServiceBaseUrl { get; set; } = "http://localhost:8999";
 

@@ -69,10 +69,11 @@ dotnet build -f net10.0-android -t:Run
 - Xcode 已升级到 26.2 或更高
 - `java -version` 输出为 17 或更高
 
-## 外部存储集成本地约定
+## 后端与下游存储本地约定
 
-当前仓库已接入“外部文件服务 + MongoDB”存储方案，默认按以下本地开发约定验证：
+当前仓库正在切换到“移动端 → HomeHoney.Api → 外部文件服务 / MongoDB”的集成方案，默认按以下本地开发约定验证：
 
+- HomeHoney.Api 地址：`https://localhost:7080`
 - 文件服务基础地址：`http://localhost:8999`
 - 文件服务 API 路径：`/api`
 - MongoDB 连接串：`mongodb://et:.netcore@localhost:27017/homehoney?authSource=homehoney`
@@ -81,6 +82,7 @@ dotnet build -f net10.0-android -t:Run
 ### 配置与本地保留范围
 
 - 这些连接目标可在应用内的“设置 → 外部存储”页面修改并保存。
+- 移动端优先保存和使用后端 API 地址，再由后端统一保存下游文件服务与 MongoDB 连接。
 - 文件服务与 MongoDB 的敏感连接信息会与普通偏好分开保存。
 - 应用本地只保留：
   - 用户偏好（Preferences）
@@ -95,9 +97,10 @@ dotnet build -f net10.0-android -t:Run
 ### 建议验证
 
 1. 先确保本地 FileBrowser 和 MongoDB 服务已启动。
-2. 进入应用的“设置 → 外部存储”，保存并验证默认连接。
-3. 再验证资料列表、详情、上传/下载，以及非文件数据的新增和读取流程。
-4. 关闭任一远端服务后重新进入相关页面，确认页面显示明确失败反馈，而不是误显示为仍可正常读取远端数据。
+2. 启动 `HomeHoney.Api`，确认其可访问 `https://localhost:7080/health`。
+3. 进入应用的“设置 → 外部存储”，先保存后端地址，再保存下游连接。
+4. 再验证资料列表、详情、上传/下载，以及非文件数据的新增和读取流程。
+5. 关闭任一远端服务后重新进入相关页面，确认页面显示明确失败反馈，而不是误显示为仍可正常读取远端数据。
 
 ## 项目结构
 

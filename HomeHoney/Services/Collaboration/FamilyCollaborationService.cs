@@ -55,6 +55,7 @@ public sealed class FamilyCollaborationService
 
     private readonly CollaborationRepository? _collaborationRepository;
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
+    private readonly ICollaborationApiClient? _collaborationApiClient;
 
     public FamilyCollaborationService()
     {
@@ -68,8 +69,31 @@ public sealed class FamilyCollaborationService
         _storageConnectionProfileService = storageConnectionProfileService;
     }
 
+    public FamilyCollaborationService(
+        CollaborationRepository collaborationRepository,
+        IStorageConnectionProfileService storageConnectionProfileService,
+        ICollaborationApiClient collaborationApiClient)
+        : this(collaborationRepository, storageConnectionProfileService)
+    {
+        _collaborationApiClient = collaborationApiClient;
+    }
+
     public async Task<IReadOnlyList<FridgeNote>> GetFridgeNotesAsync()
     {
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var remote = (await _collaborationApiClient.GetFridgeNotesAsync()).OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
+                ReplaceLocal(_fridgeNotes, remote);
+                return remote;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
         {
             try
@@ -89,6 +113,20 @@ public sealed class FamilyCollaborationService
 
     public async Task<IReadOnlyList<Memo>> GetMemosAsync()
     {
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var remote = (await _collaborationApiClient.GetMemosAsync()).OrderBy(item => item.DueAt).ToList();
+                ReplaceLocal(_memos, remote);
+                return remote;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         if (await UseRemoteStorageAsync() && _collaborationRepository is not null)
         {
             try
@@ -113,6 +151,30 @@ public sealed class FamilyCollaborationService
     public async Task SaveFridgeNoteAsync(FridgeNote fridgeNote)
     {
         fridgeNote.UpdatedAt = DateTime.Now;
+
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var saved = await _collaborationApiClient.SaveFridgeNoteAsync(fridgeNote);
+                var existingRemote = _fridgeNotes.FirstOrDefault(item => item.Id == saved.Id);
+                if (existingRemote is null)
+                {
+                    _fridgeNotes.Add(saved);
+                }
+                else
+                {
+                    _fridgeNotes[_fridgeNotes.IndexOf(existingRemote)] = saved;
+                }
+
+                return;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var existing = _fridgeNotes.FirstOrDefault(item => item.Id == fridgeNote.Id);
         if (existing is null)
         {
@@ -134,6 +196,30 @@ public sealed class FamilyCollaborationService
     public async Task SaveMemoAsync(Memo memo)
     {
         memo.UpdatedAt = DateTime.Now;
+
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var saved = await _collaborationApiClient.SaveMemoAsync(memo);
+                var existingRemote = _memos.FirstOrDefault(item => item.Id == saved.Id);
+                if (existingRemote is null)
+                {
+                    _memos.Add(saved);
+                }
+                else
+                {
+                    _memos[_memos.IndexOf(existingRemote)] = saved;
+                }
+
+                return;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var existing = _memos.FirstOrDefault(item => item.Id == memo.Id);
         if (existing is null)
         {
@@ -158,6 +244,24 @@ public sealed class FamilyCollaborationService
         if (existing is null)
         {
             return false;
+        }
+
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var deleted = await _collaborationApiClient.DeleteFridgeNoteAsync(id);
+                if (deleted)
+                {
+                    _fridgeNotes.Remove(existing);
+                }
+
+                return deleted;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
         }
 
         _fridgeNotes.Remove(existing);
@@ -197,6 +301,36 @@ public sealed class FamilyCollaborationService
         return Task.CompletedTask;
     }
 
+    public async Task<bool> DeleteMemoAsync(Guid id)
+    {
+        var existing = _memos.FirstOrDefault(item => item.Id == id);
+        if (existing is null)
+        {
+            return false;
+        }
+
+        if (await UseBackendApiAsync() && _collaborationApiClient is not null)
+        {
+            try
+            {
+                var deleted = await _collaborationApiClient.DeleteMemoAsync(id);
+                if (deleted)
+                {
+                    _memos.Remove(existing);
+                }
+
+                return deleted;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
+        _memos.Remove(existing);
+        return true;
+    }
+
     public IEnumerable<CollaborationSummary> GetRecentMessages(int maxItems = 3)
     {
         var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, note.Title, note.Content, AppRoutes.FridgeNoteEdit(note.Id), note.Priority.ToString(), note.DueAt));
@@ -214,6 +348,19 @@ public sealed class FamilyCollaborationService
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
         var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
         return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
+    }
+
+    private async Task<bool> UseBackendApiAsync()
+    {
+        if (_storageConnectionProfileService is null)
+        {
+            return false;
+        }
+
+        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        return profile.IsActive
+            && profile.ValidationStatus == StorageValidationStatus.Valid
+            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
     }
 
     private static void ReplaceLocal<T>(List<T> target, List<T> source)

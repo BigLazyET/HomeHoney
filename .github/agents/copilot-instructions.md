@@ -11,6 +11,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-10
 - 用户偏好配置 + 当前内存种子数据服务（本特性不新增存储类型） (004-upgrade-dotnet10)
 - C# 14 / .NET 10 (MAUI Blazor Hybrid) + Microsoft.Maui.Controls, Microsoft.AspNetCore.Components.WebView.Maui, `HttpClient`, MongoDB.Driver, Preferences, SecureStorage, xUnit, bUnit, Moq (005-integrate-storage-services)
 - 文件本体走外部文件服务；结构化业务数据走 MongoDB；连接配置走 Preferences + SecureStorage；不做本地业务数据/文件持久化 (005-integrate-storage-services)
+- C# 14 / .NET 10 + ASP.NET Core Web API, `HttpClient`/`IHttpClientFactory`, MongoDB.Driver, ASP.NET Core OpenAPI, existing xUnit + Moq + bUnit test stack, `WebApplicationFactory` for API integration tests (006-backend-api-service)
+- 后端连接 FileBrowser 处理文件本体，连接 MongoDB 处理结构化业务数据；移动端仅保留后端地址、用户偏好和敏感信息 (006-backend-api-service)
 
 - C# 12 / .NET 9 + Microsoft.Maui, Microsoft.AspNetCore.Components.WebView.Maui (001-project-scaffold)
 
@@ -33,9 +35,9 @@ specs/
 C# 14 / .NET 10: Follow standard conventions
 
 ## Recent Changes
+- 006-backend-api-service: Added C# 14 / .NET 10 + ASP.NET Core Web API, `HttpClient`/`IHttpClientFactory`, MongoDB.Driver, ASP.NET Core OpenAPI, existing xUnit + Moq + bUnit test stack, `WebApplicationFactory` for API integration tests
 - 005-integrate-storage-services: Added C# 14 / .NET 10 (MAUI Blazor Hybrid) + Microsoft.Maui.Controls, Microsoft.AspNetCore.Components.WebView.Maui, `HttpClient`, MongoDB.Driver, Preferences, SecureStorage, xUnit, bUnit, Moq
 - 004-upgrade-dotnet10: Added C# 14 / .NET 10 + Microsoft.Maui.Controls, Microsoft.AspNetCore.Components.WebView.Maui, Microsoft.AspNetCore.Components.Web, Microsoft.NET.Test.Sdk, xUnit, bUnit, Moq
-- 003-delete-nav-onboarding: Added C# 12 / .NET 9 + Microsoft.Maui, Microsoft.AspNetCore.Components.WebView.Maui, Blazor 组件体系, 现有应用服务层
 
 
 <!-- MANUAL ADDITIONS START -->

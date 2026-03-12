@@ -29,8 +29,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IGreetingService, GreetingService>();
 		builder.Services.AddSingleton<NavigationStructureService>();
 		builder.Services.AddSingleton<ISecretStore, SecureSecretStore>();
+		builder.Services.AddSingleton(new BackendApiOptions());
 		builder.Services.AddSingleton<StorageConfigurationValidator>();
 		builder.Services.AddSingleton<IStorageConnectionProfileService, StorageConnectionProfileService>();
+		builder.Services.AddSingleton<BackendApiHttpClientFactory>();
+		builder.Services.AddSingleton<IDocumentApiClient, DocumentApiClient>();
+		builder.Services.AddSingleton<ICollaborationApiClient, CollaborationApiClient>();
+		builder.Services.AddSingleton<IReminderApiClient, ReminderApiClient>();
+		builder.Services.AddSingleton<ISearchApiClient, SearchApiClient>();
+		builder.Services.AddSingleton<IPreferenceApiClient, PreferenceApiClient>();
 		builder.Services.AddSingleton<IMongoContextFactory, MongoContextFactory>();
 		builder.Services.AddSingleton<IFileStorageGateway, FileBrowserFileStorageGateway>();
 		builder.Services.AddSingleton<IDocumentMetadataRepository, DocumentMetadataRepository>();
@@ -38,6 +45,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<CollaborationRepository>();
 		builder.Services.AddSingleton<PreferenceRepository>();
 		builder.Services.AddSingleton<DocumentFileOrchestrator>();
+		builder.Services.AddSingleton<IAdminStorageApiClient, AdminStorageApiClient>();
 		builder.Services.AddSingleton<UserPreferenceService>();
 		builder.Services.AddSingleton<DocumentCatalogService>();
 		builder.Services.AddSingleton<FamilyCollaborationService>();

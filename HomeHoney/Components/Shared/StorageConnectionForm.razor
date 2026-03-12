@@ -7,19 +7,23 @@
             <InputText @bind-Value="Model.DisplayName" />
         </label>
         <label>
-            <span>文件服务地址</span>
+            <span>后端 API 地址</span>
+            <InputText @bind-Value="Model.ApiBaseUrl" />
+        </label>
+        <label>
+            <span>下游文件服务地址</span>
             <InputText @bind-Value="Model.FileServiceBaseUrl" />
         </label>
         <label>
-            <span>文件服务 API 路径</span>
+            <span>下游文件服务 API 路径</span>
             <InputText @bind-Value="Model.FileServiceApiPath" />
         </label>
         <label>
-            <span>Mongo 数据库名</span>
+            <span>下游 Mongo 数据库名</span>
             <InputText @bind-Value="Model.MongoDatabaseName" />
         </label>
         <label class="form-grid-span-2">
-            <span>Mongo 连接字符串</span>
+            <span>下游 Mongo 连接字符串</span>
             <InputText @bind-Value="MongoConnectionStringProxy" @bind-Value:event="oninput" />
         </label>
     </div>

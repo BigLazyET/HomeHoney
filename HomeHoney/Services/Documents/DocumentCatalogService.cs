@@ -14,6 +14,7 @@ public sealed class DocumentCatalogService
     private readonly IDocumentMetadataRepository? _documentMetadataRepository;
     private readonly IBusinessAggregateRepository? _businessAggregateRepository;
     private readonly DocumentFileOrchestrator? _documentFileOrchestrator;
+    private readonly IDocumentApiClient? _documentApiClient;
 
     public DocumentCatalogService()
     {
@@ -39,6 +40,17 @@ public sealed class DocumentCatalogService
         _members = [];
         _spaces = [];
         SeedLocalData();
+    }
+
+    public DocumentCatalogService(
+        IStorageConnectionProfileService storageConnectionProfileService,
+        IDocumentMetadataRepository documentMetadataRepository,
+        IBusinessAggregateRepository businessAggregateRepository,
+        DocumentFileOrchestrator documentFileOrchestrator,
+        IDocumentApiClient documentApiClient)
+        : this(storageConnectionProfileService, documentMetadataRepository, businessAggregateRepository, documentFileOrchestrator)
+    {
+        _documentApiClient = documentApiClient;
     }
 
     private void SeedLocalData()
@@ -166,6 +178,20 @@ public sealed class DocumentCatalogService
 
     public async Task<IReadOnlyList<InsuranceRecord>> GetInsuranceRecordsAsync()
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var remote = (await _documentApiClient.GetInsuranceRecordsAsync()).OrderBy(record => record.ExpiryDate).ToList();
+                ReplaceLocal(_insuranceRecords, remote);
+                return remote;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             try
@@ -186,6 +212,20 @@ public sealed class DocumentCatalogService
 
     public async Task<IReadOnlyList<ManualRecord>> GetManualRecordsAsync()
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var remote = (await _documentApiClient.GetManualRecordsAsync()).OrderBy(record => record.SpaceId).ToList();
+                ReplaceLocal(_manualRecords, remote);
+                return remote;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
         {
             try
@@ -214,6 +254,21 @@ public sealed class DocumentCatalogService
     {
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
+
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var saved = await _documentApiClient.SaveInsuranceRecordAsync(record);
+                UpsertLocal(_insuranceRecords, saved, item => item.Id == saved.Id);
+                return;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         UpsertLocal(_insuranceRecords, record, item => item.Id == record.Id);
 
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
@@ -226,6 +281,21 @@ public sealed class DocumentCatalogService
     {
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
+
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var saved = await _documentApiClient.SaveManualRecordAsync(record);
+                UpsertLocal(_manualRecords, saved, item => item.Id == saved.Id);
+                return;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         UpsertLocal(_manualRecords, record, item => item.Id == record.Id);
 
         if (await UseRemoteStorageAsync() && _documentMetadataRepository is not null)
@@ -240,6 +310,24 @@ public sealed class DocumentCatalogService
         if (existing is null)
         {
             return false;
+        }
+
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var deleted = await _documentApiClient.DeleteInsuranceRecordAsync(id);
+                if (deleted)
+                {
+                    _insuranceRecords.Remove(existing);
+                }
+
+                return deleted;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
         }
 
         _insuranceRecords.Remove(existing);
@@ -257,6 +345,24 @@ public sealed class DocumentCatalogService
         if (existing is null)
         {
             return false;
+        }
+
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var deleted = await _documentApiClient.DeleteManualRecordAsync(id);
+                if (deleted)
+                {
+                    _manualRecords.Remove(existing);
+                }
+
+                return deleted;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
         }
 
         _manualRecords.Remove(existing);
@@ -291,6 +397,25 @@ public sealed class DocumentCatalogService
 
     public async Task<FileStorageResult> UploadInsuranceFileAsync(Guid id, Stream content, string fileName, string? contentType)
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var uploadResult = await _documentApiClient.UploadInsuranceFileAsync(id, content, fileName, contentType);
+                var refreshed = await _documentApiClient.GetInsuranceRecordAsync(id);
+                if (refreshed is not null)
+                {
+                    UpsertLocal(_insuranceRecords, refreshed, item => item.Id == refreshed.Id);
+                }
+
+                return uploadResult;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var record = await GetInsuranceRecordAsync(id);
         if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
         {
@@ -304,6 +429,25 @@ public sealed class DocumentCatalogService
 
     public async Task<FileStorageResult> UploadManualFileAsync(Guid id, Stream content, string fileName, string? contentType)
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                var uploadResult = await _documentApiClient.UploadManualFileAsync(id, content, fileName, contentType);
+                var refreshed = await _documentApiClient.GetManualRecordAsync(id);
+                if (refreshed is not null)
+                {
+                    UpsertLocal(_manualRecords, refreshed, item => item.Id == refreshed.Id);
+                }
+
+                return uploadResult;
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var record = await GetManualRecordAsync(id);
         if (record is null || _documentFileOrchestrator is null || !await UseRemoteStorageAsync())
         {
@@ -317,6 +461,18 @@ public sealed class DocumentCatalogService
 
     public async Task<FileDownloadResult> DownloadInsuranceFileAsync(Guid id)
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                return await _documentApiClient.DownloadInsuranceFileAsync(id);
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var record = await GetInsuranceRecordAsync(id);
         if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
         {
@@ -328,6 +484,18 @@ public sealed class DocumentCatalogService
 
     public async Task<FileDownloadResult> DownloadManualFileAsync(Guid id)
     {
+        if (await UseBackendApiAsync() && _documentApiClient is not null)
+        {
+            try
+            {
+                return await _documentApiClient.DownloadManualFileAsync(id);
+            }
+            catch
+            {
+                // Fall back to the current in-memory view when the backend service is unavailable.
+            }
+        }
+
         var record = await GetManualRecordAsync(id);
         if (record?.PrimaryFile is null || _documentFileOrchestrator is null)
         {
@@ -347,6 +515,19 @@ public sealed class DocumentCatalogService
         var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
         var connectionString = await _storageConnectionProfileService.GetMongoConnectionStringAsync();
         return profile.IsActive && profile.ValidationStatus == StorageValidationStatus.Valid && !string.IsNullOrWhiteSpace(connectionString);
+    }
+
+    private async Task<bool> UseBackendApiAsync()
+    {
+        if (_storageConnectionProfileService is null)
+        {
+            return false;
+        }
+
+        var profile = await _storageConnectionProfileService.GetActiveProfileAsync();
+        return profile.IsActive
+            && profile.ValidationStatus == StorageValidationStatus.Valid
+            && Uri.TryCreate(profile.ApiBaseUrl, UriKind.Absolute, out _);
     }
 
     private async Task SyncReferenceDataAsync()

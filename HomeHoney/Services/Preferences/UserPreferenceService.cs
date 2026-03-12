@@ -150,6 +150,13 @@ public sealed class UserPreferenceService
     {
         try
         {
+            var preferenceApiClient = _serviceProvider?.GetService(typeof(IPreferenceApiClient)) as IPreferenceApiClient;
+            if (preferenceApiClient is not null)
+            {
+                preferenceApiClient.UpdateAsync(_preferences).GetAwaiter().GetResult();
+                return;
+            }
+
             var preferenceRepository = _serviceProvider?.GetService(typeof(PreferenceRepository)) as PreferenceRepository;
             preferenceRepository?.SaveUserPreferenceAsync(_preferences).GetAwaiter().GetResult();
         }

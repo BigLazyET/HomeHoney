@@ -2,9 +2,9 @@
 @inject HomeHoney.Services.Storage.IStorageConnectionProfileService StorageConnectionProfileService
 
 <section class="content-page form-page">
-    <PageHeader Eyebrow="外部存储"
-                Title="文件服务与数据服务连接"
-                Description="修改 FileBrowser 与 MongoDB 的连接目标。保存后，资料文件和其余业务数据会优先使用最新配置。"
+    <PageHeader Eyebrow="后端服务"
+                Title="后端 API 与下游存储设置"
+                Description="移动端只连接 HomeHoney 后端，由后端统一管理文件服务与 MongoDB 的连接目标。"
                 BackHref="@AppRoutes.GetParentRoute(AppRoutes.SettingsStorage)"
                 BackText="返回设置">
     </PageHeader>
@@ -21,9 +21,9 @@
     <div class="detail-card">
         <h2>当前策略</h2>
         <ul>
-            <li>文件本体使用外部文件服务</li>
-            <li>非文件业务数据使用 MongoDB</li>
-            <li>最近一次成功保存的连接会在应用重启后继续生效</li>
+            <li>移动端只保存后端 API 地址，不再直接验证 FileBrowser 或 MongoDB</li>
+            <li>后端负责统一保存和验证下游文件服务与 MongoDB 配置</li>
+            <li>最近一次成功保存的后端与下游设置会在应用重启后继续生效</li>
         </ul>
     </div>
 </section>
