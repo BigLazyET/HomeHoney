@@ -1,12 +1,13 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using HomeHoney.Models;
 
 namespace HomeHoney.Services.Storage;
 
 public sealed class AdminStorageApiClient : IAdminStorageApiClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly BackendApiHttpClientFactory _httpClientFactory;
 
     public AdminStorageApiClient(BackendApiHttpClientFactory httpClientFactory)
@@ -52,16 +53,8 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
             ApiBaseUrl = backendProfile.ApiBaseUrl,
             IsActive = backendProfile.IsActive,
             LastValidatedAt = backendProfile.LastValidatedAt,
-            ValidationStatus = MapStatus(backendProfile.ValidationStatus),
+            ValidationStatus = backendProfile.ValidationStatus,
             ValidationMessage = backendProfile.ValidationMessage,
-        };
-
-    private static StorageValidationStatus MapStatus(string? status)
-        => status?.ToLowerInvariant() switch
-        {
-            "valid" => StorageValidationStatus.Valid,
-            "invalid" => StorageValidationStatus.Invalid,
-            _ => StorageValidationStatus.Unknown,
         };
 
     private static async Task<T> GetRequiredAsync<T>(HttpClient client, string requestUri, CancellationToken cancellationToken)
@@ -117,7 +110,7 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
         public string ApiBaseUrl { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public DateTime? LastValidatedAt { get; set; }
-        public string ValidationStatus { get; set; } = string.Empty;
+        public StorageValidationStatus ValidationStatus { get; set; } = StorageValidationStatus.Unknown;
         public string? ValidationMessage { get; set; }
     }
 
@@ -125,5 +118,12 @@ public sealed class AdminStorageApiClient : IAdminStorageApiClient
     {
         public string DisplayName { get; set; } = string.Empty;
         public string ApiBaseUrl { get; set; } = string.Empty;
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 }

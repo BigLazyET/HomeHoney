@@ -38,8 +38,9 @@ public sealed class ReminderCenterService
     public async Task<IReadOnlyList<ReminderItem>> GetUpcomingAsync(int days = 30)
     {
         LastErrorMessage = null;
+        var useBackendApi = await UseBackendApiAsync();
 
-        if (await UseBackendApiAsync() && _reminderApiClient is not null)
+        if (useBackendApi && _reminderApiClient is not null)
         {
             try
             {
@@ -66,8 +67,8 @@ public sealed class ReminderCenterService
                 {
                     SourceType = ReminderSourceType.Insurance,
                     SourceId = record.Id,
-                    Title = record.PolicyName,
-                    Summary = $"{record.ProviderName} · 到期日 {record.ExpiryDate:yyyy-MM-dd}",
+                    Title = FallbackText(record.PolicyName, "未命名保单"),
+                    Summary = BuildInsuranceSummary(record.ProviderName, record.ExpiryDate),
                     DueAt = dueAt,
                     Priority = dueAt <= DateTime.Today.AddDays(7) ? ReminderPriority.High : ReminderPriority.Medium,
                     Status = dueAt <= DateTime.Today.AddDays(7) ? ReminderStatus.Upcoming : ReminderStatus.Pending,
@@ -84,7 +85,7 @@ public sealed class ReminderCenterService
                 {
                     SourceType = ReminderSourceType.Manual,
                     SourceId = record.Id,
-                    Title = record.DeviceName,
+                    Title = FallbackText(record.DeviceName, "未命名设备"),
                     Summary = $"保修截止 {record.WarrantyExpiryDate:yyyy-MM-dd}",
                     DueAt = dueAt,
                     Priority = dueAt <= DateTime.Today.AddDays(14) ? ReminderPriority.High : ReminderPriority.Medium,
@@ -101,8 +102,8 @@ public sealed class ReminderCenterService
             {
                 SourceType = ReminderSourceType.FridgeNote,
                 SourceId = note.Id,
-                Title = note.Title,
-                Summary = note.Content,
+                Title = FallbackText(note.Title, "未命名冰箱贴"),
+                Summary = FallbackText(note.Content, "暂未填写内容"),
                 DueAt = note.DueAt ?? DateTime.Today,
                 Priority = note.Priority switch
                 {
@@ -122,8 +123,8 @@ public sealed class ReminderCenterService
             {
                 SourceType = ReminderSourceType.Memo,
                 SourceId = memo.Id,
-                Title = memo.Title,
-                Summary = memo.Content,
+                Title = FallbackText(memo.Title, "未命名备忘录"),
+                Summary = FallbackText(memo.Content, "暂未填写内容"),
                 DueAt = memo.DueAt ?? DateTime.Today,
                 Priority = memo.Importance switch
                 {
@@ -138,6 +139,12 @@ public sealed class ReminderCenterService
 
         return reminders.OrderBy(item => item.DueAt).ToList();
     }
+
+    private static string FallbackText(string? value, string fallback)
+        => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+
+    private static string BuildInsuranceSummary(string? providerName, DateOnly expiryDate)
+        => $"{FallbackText(providerName, "保险公司待补充")} · 到期日 {expiryDate:yyyy-MM-dd}";
 
     private async Task<bool> UseBackendApiAsync()
     {

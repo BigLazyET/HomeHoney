@@ -25,13 +25,13 @@ public sealed class InsuranceRecord
 
     public Guid InsuredMemberId { get; set; }
 
-    public InsuranceCategory InsuranceCategory { get; set; } = InsuranceCategory.Medical;
+    public InsuranceCategory InsuranceCategory { get; set; }
 
-    public InsuranceStatus Status { get; set; } = InsuranceStatus.Active;
+    public InsuranceStatus Status { get; set; }
 
-    public DateOnly EffectiveDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public DateOnly EffectiveDate { get; set; }
 
-    public DateOnly ExpiryDate { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddYears(1));
+    public DateOnly ExpiryDate { get; set; }
 
     public string ProviderName { get; set; } = string.Empty;
 
@@ -45,11 +45,11 @@ public sealed class InsuranceRecord
 
     public FileResource? PrimaryFile { get; set; }
 
-    public string IntegrityStatus { get; set; } = "Healthy";
+    public string IntegrityStatus { get; set; } = string.Empty;
 
     public string? SyncMessage { get; set; }
 
     public List<string> Tags { get; set; } = [];
 
-    public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
+    public DateTime LastUpdatedAt { get; set; }
 }

@@ -118,7 +118,7 @@ public sealed class DocumentApiClient : IDocumentApiClient
             file = fileElement.Deserialize<FileResource>(JsonOptions);
         }
 
-        return new(true, message, file?.ExternalPath, file?.ExternalFileId, file?.ContentType, file?.SizeBytes, file?.AvailabilityStatus ?? FileAvailabilityStatus.Available);
+        return new(true, message, file?.ExternalPath, file?.ExternalFileId, file?.FileName, file?.ContentType, file?.SizeBytes, file?.LastSyncedAt, file?.AvailabilityStatus ?? FileAvailabilityStatus.Available);
     }
 
     private async Task<FileDownloadResult> DownloadAsync(string requestUri, CancellationToken cancellationToken)

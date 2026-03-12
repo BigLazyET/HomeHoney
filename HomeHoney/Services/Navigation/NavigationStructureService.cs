@@ -11,7 +11,7 @@ public sealed class NavigationStructureService
         new("首页", "🏠", AppRoutes.Home, true, "摘要与快捷入口"),
         new("资料", "🗂️", AppRoutes.Documents, false, "保险与说明书"),
         new("冰箱贴", "🧲", AppRoutes.FridgeNotes, false, "家庭留言与待办"),
-        new("提醒", "⏰", AppRoutes.Reminders, false, "待处理事项与搜索"),
+        new("备忘录", "📝", AppRoutes.Reminders, false, "长期事项与正式记录"),
         new("设置", "⚙️", AppRoutes.Settings, false, "主题与个性化"),
     ];
 

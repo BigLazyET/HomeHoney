@@ -25,8 +25,10 @@ public sealed class DocumentFileOrchestrator
             upload.Message,
             upload.File?.Path,
             upload.File?.Path,
+            upload.File?.Name,
             upload.File?.ContentType,
             upload.File?.SizeBytes,
+            DateTime.UtcNow,
             upload.IsSuccess ? FileAvailabilityStatus.Available : FileAvailabilityStatus.SyncError);
     }
 

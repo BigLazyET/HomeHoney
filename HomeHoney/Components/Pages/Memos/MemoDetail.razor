@@ -18,8 +18,8 @@ else
         <div class="section-heading">
             <div>
                 <span class="page-eyebrow">家庭备忘录</span>
-                <h1>@_memo.Title</h1>
-                <p>@_memo.Content</p>
+                <h1>@PresentationFallbacks.TextOrFallback(_memo.Title, "未命名备忘录")</h1>
+                <p>@PresentationFallbacks.TextOrFallback(_memo.Content, "这条备忘录暂时还没有填写详细内容。")</p>
             </div>
             <div class="page-actions-inline">
                 <a class="button-secondary" href="/memos">返回列表</a>
@@ -31,10 +31,10 @@ else
             <article class="detail-card">
                 <h2>状态信息</h2>
                 <ul>
-                    <li>分类：@_memo.MemoCategory</li>
-                    <li>重要级别：@_memo.Importance</li>
-                    <li>状态：@_memo.Status</li>
-                    <li>到期时间：@(_memo.DueAt?.ToString("yyyy-MM-dd HH:mm") ?? "未设置")</li>
+                    <li>分类：@GetCategoryLabel(_memo.MemoCategory)</li>
+                    <li>重要级别：@GetImportanceLabel(_memo.Importance)</li>
+                    <li>状态：@GetStatusLabel(_memo.Status)</li>
+                    <li>到期时间：@PresentationFallbacks.DateTimeOrFallback(_memo.DueAt)</li>
                 </ul>
             </article>
             <article class="detail-card">
@@ -61,4 +61,28 @@ else
         _memo = await FamilyCollaborationService.GetMemoAsync(Id);
         _statusMessage = FamilyCollaborationService.LastErrorMessage;
     }
+
+    private static string GetCategoryLabel(MemoCategory category) => category switch
+    {
+        MemoCategory.FamilyRule => "家庭规则",
+        MemoCategory.LongTermPlan => "长期计划",
+        MemoCategory.ShoppingPlan => "采购计划",
+        MemoCategory.Medical => "医疗事项",
+        MemoCategory.Education => "教育安排",
+        _ => "其他",
+    };
+
+    private static string GetImportanceLabel(MemoImportance importance) => importance switch
+    {
+        MemoImportance.Critical => "高优先级",
+        MemoImportance.Important => "重要",
+        _ => "普通",
+    };
+
+    private static string GetStatusLabel(MemoStatus status) => status switch
+    {
+        MemoStatus.InProgress => "进行中",
+        MemoStatus.Completed => "已完成",
+        _ => "已归档",
+    };
 }

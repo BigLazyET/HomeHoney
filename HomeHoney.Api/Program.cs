@@ -13,6 +13,7 @@ builder.Services.AddBackendServices(builder.Configuration);
 var app = builder.Build();
 
 app.Services.ValidateBackendStorageConfiguration();
+await app.Services.EnsureMongoIndexesAsync();
 
 app.UseExceptionHandler();
 

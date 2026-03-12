@@ -1,11 +1,56 @@
-<div class="status-banner @(IsError ? "is-error" : "is-warning")" role="status" aria-live="polite">
-    @Message
+<div class="status-banner @GetVariantClass()" role="status" aria-live="polite">
+    <div class="status-banner-copy">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <strong class="status-banner-title">@Title</strong>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <span>@Message</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(ActionText) && OnAction.HasDelegate)
+    {
+        <button class="status-banner-action" type="button" @onclick="OnAction">@ActionText</button>
+    }
 </div>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
     public string Message { get; set; } = string.Empty;
 
     [Parameter]
     public bool IsError { get; set; } = true;
+
+    [Parameter]
+    public bool IsSuccess { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string? ActionText { get; set; }
+
+    [Parameter]
+    public EventCallback OnAction { get; set; }
+
+    private string GetVariantClass()
+    {
+        if (IsLoading)
+        {
+            return "is-loading";
+        }
+
+        if (IsSuccess)
+        {
+            return "is-success";
+        }
+
+        return IsError ? "is-error" : "is-warning";
+    }
 }

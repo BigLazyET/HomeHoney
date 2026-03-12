@@ -32,11 +32,11 @@ public sealed class Memo
 
     public string Content { get; set; } = string.Empty;
 
-    public MemoCategory MemoCategory { get; set; } = MemoCategory.Other;
+    public MemoCategory MemoCategory { get; set; }
 
-    public MemoImportance Importance { get; set; } = MemoImportance.Normal;
+    public MemoImportance Importance { get; set; }
 
-    public MemoStatus Status { get; set; } = MemoStatus.InProgress;
+    public MemoStatus Status { get; set; }
 
     public Guid? OwnerMemberId { get; set; }
 
@@ -44,7 +44,7 @@ public sealed class Memo
 
     public DateTime? DueAt { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; }
 
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; }
 }

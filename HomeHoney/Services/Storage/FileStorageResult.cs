@@ -7,8 +7,10 @@ public sealed record FileStorageResult(
     string Message,
     string? RemotePath = null,
     string? RemoteId = null,
+    string? FileName = null,
     string? ContentType = null,
     long? SizeBytes = null,
+    DateTime? LastSyncedAt = null,
     FileAvailabilityStatus AvailabilityStatus = FileAvailabilityStatus.Unknown);
 
 public sealed record FileDownloadResult(

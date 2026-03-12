@@ -21,11 +21,11 @@ public sealed class ManualRecord
 
     public Guid SpaceId { get; set; }
 
-    public ManualCategory ManualCategory { get; set; } = ManualCategory.Appliance;
+    public ManualCategory ManualCategory { get; set; }
 
-    public DateOnly PurchaseDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public DateOnly PurchaseDate { get; set; }
 
-    public DateOnly WarrantyExpiryDate { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddYears(2));
+    public DateOnly WarrantyExpiryDate { get; set; }
 
     public string Summary { get; set; } = string.Empty;
 
@@ -33,11 +33,11 @@ public sealed class ManualRecord
 
     public FileResource? PrimaryFile { get; set; }
 
-    public string IntegrityStatus { get; set; } = "Healthy";
+    public string IntegrityStatus { get; set; } = string.Empty;
 
     public string? SyncMessage { get; set; }
 
     public List<string> Tags { get; set; } = [];
 
-    public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
+    public DateTime LastUpdatedAt { get; set; }
 }

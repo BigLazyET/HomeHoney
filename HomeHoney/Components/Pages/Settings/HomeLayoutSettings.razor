@@ -67,10 +67,10 @@
 
     private static string GetLabel(HomeModuleType type) => type switch
     {
-        HomeModuleType.RecentDocuments => "最近资料",
-        HomeModuleType.UpcomingReminders => "即将到期",
         HomeModuleType.QuickActions => "快捷操作",
+        HomeModuleType.UpcomingReminders => "未来 30 天需要关注的事项",
+        HomeModuleType.RecentDocuments => "最近资料",
         HomeModuleType.FamilyMessages => "家庭留言摘要",
-        _ => "推荐动作",
+        _ => "推荐下一步",
     };
 }

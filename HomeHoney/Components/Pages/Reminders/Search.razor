@@ -16,19 +16,28 @@
         <button class="button-primary" @onclick="RunSearchAsync">搜索</button>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    @if (!string.IsNullOrWhiteSpace(_state.Message))
     {
-        <StatusBanner Message="@_statusMessage" IsError="false" />
+        <StatusBanner Title="@(_state.Status == CollectionViewStatus.Error ? "搜索失败" : "搜索同步提醒")"
+                      Message="@_state.Message"
+                      IsError="@(_state.Status == CollectionViewStatus.Error)"
+                      IsLoading="@(_state.Status == CollectionViewStatus.Retrying || _state.Status == CollectionViewStatus.Loading)"
+                      ActionText="@(_state.CanRetry && _hasSearched ? "手动重试" : null)"
+                      OnAction="RetrySearchAsync" />
     }
 
-    @if (_hasSearched && _groups.Count == 0)
+    @if (_state.Status == CollectionViewStatus.Loading || _state.Status == CollectionViewStatus.Retrying)
+    {
+        <EmptyState Icon="🔍" Title="正在搜索" Description="请稍候，系统正在整理跨模块匹配结果。" />
+    }
+    else if (_hasSearched && _state.Items.Count == 0 && _state.Status != CollectionViewStatus.Error)
     {
         <EmptyState Icon="🔍" Title="没有找到匹配内容" Description="试试换一个关键词，或者先去资料、冰箱贴和备忘录中补充内容。" />
     }
     else
     {
         <div class="search-result-groups">
-            @foreach (var group in _groups)
+            @foreach (var group in _state.Items)
             {
                 <section class="detail-card">
                     <h2>@group.Title</h2>
@@ -50,13 +59,38 @@
 @code {
     private string _keyword = string.Empty;
     private bool _hasSearched;
-    private IReadOnlyList<HomeHoney.Services.Search.SearchGroupResult> _groups = [];
-    private string? _statusMessage;
+    private RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult> _state = RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateEmpty();
 
     private async Task RunSearchAsync()
     {
-        _groups = await SearchIndexService.SearchAsync(_keyword);
-        _statusMessage = SearchIndexService.LastErrorMessage;
         _hasSearched = true;
+        _state = RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateLoading(_state.Items);
+        await PerformSearchAsync(isRetry: false);
+    }
+
+    private async Task RetrySearchAsync()
+    {
+        if (!_hasSearched)
+        {
+            return;
+        }
+
+        _state = RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateRetrying(_state.Items, _state.Message);
+        await PerformSearchAsync(isRetry: true);
+    }
+
+    private async Task PerformSearchAsync(bool isRetry)
+    {
+        var groups = await SearchIndexService.SearchAsync(_keyword);
+        var message = SearchIndexService.LastErrorMessage;
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            _state = RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateError(message, groups, _state.LastSuccessAt);
+            return;
+        }
+
+        _state = groups.Count == 0
+            ? RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateEmpty(_hasSearched ? "这次搜索没有找到匹配结果。" : null)
+            : RetryableCollectionState<HomeHoney.Services.Search.SearchGroupResult>.CreateReady(groups);
     }
 }

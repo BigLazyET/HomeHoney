@@ -26,36 +26,51 @@ else
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
-            <StatusBanner Message="@_statusMessage" />
+            <StatusBanner Title="@_statusTitle" Message="@_statusMessage" IsError="@_isStatusError" />
         }
 
-        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <EditForm Model="_model" OnSubmit="HandleSubmitAsync">
             <div class="form-grid">
                 <label>
-                    <span>标题</span>
-                    <InputText @bind-Value="_model.Title" />
+                    <span>标题 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.Title" placeholder="例如：周末采购" />
+                    @if (TryGetFieldError("Title", out var titleError))
+                    {
+                        <small class="field-error">@titleError</small>
+                    }
                 </label>
                 <label>
-                    <span>分类</span>
-                    <InputSelect @bind-Value="_model.Category">
+                    <span>分类 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedCategory" class="@GetSelectClass(_selectedCategory)">
+                        <option value="">请选择冰箱贴分类</option>
                         @foreach (var value in Enum.GetValues<FridgeNoteCategory>())
                         {
-                            <option value="@value">@value</option>
+                            <option value="@value.ToString()">@GetCategoryLabel(value)</option>
                         }
                     </InputSelect>
+                    @if (TryGetFieldError("Category", out var categoryError))
+                    {
+                        <small class="field-error">@categoryError</small>
+                    }
                 </label>
                 <label>
-                    <span>优先级</span>
-                    <InputSelect @bind-Value="_model.Priority">
+                    <span>优先级 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedPriority" class="@GetSelectClass(_selectedPriority)">
+                        <option value="">请选择优先级</option>
                         @foreach (var value in Enum.GetValues<NotePriority>())
                         {
-                            <option value="@value">@value</option>
+                            <option value="@value.ToString()">@GetPriorityLabel(value)</option>
                         }
                     </InputSelect>
+                    @if (TryGetFieldError("Priority", out var priorityError))
+                    {
+                        <small class="field-error">@priorityError</small>
+                    }
                 </label>
                 <label>
                     <span>到期时间</span>
-                    <InputDate @bind-Value="_dueDate" />
+                    <InputDate @bind-Value="_dueDate" class="@GetDateClass(_dueDate)" />
+                    <small class="field-hint">如果只是普通留言或购物清单，也可以先留空。</small>
                 </label>
                 <label class="checkbox-row">
                     <InputCheckbox @bind-Value="_model.IsPinned" />
@@ -66,8 +81,12 @@ else
                     <span>标记为已完成</span>
                 </label>
                 <label class="form-grid-span-2">
-                    <span>内容</span>
-                    <InputTextArea @bind-Value="_model.Content" />
+                    <span>内容 <span class="field-required">*</span></span>
+                    <InputTextArea @bind-Value="_model.Content" placeholder="例如：牛奶、鸡蛋、厨房纸、猫粮" />
+                    @if (TryGetFieldError("Content", out var contentError))
+                    {
+                        <small class="field-error">@contentError</small>
+                    }
                 </label>
             </div>
 
@@ -84,9 +103,14 @@ else
     public Guid? Id { get; set; }
 
     private FridgeNote _model = new();
-    private DateTime _dueDate = DateTime.Today.AddDays(1);
+    private DateTime? _dueDate;
     private bool _isMissingNote;
     private string? _statusMessage;
+    private string? _statusTitle;
+    private bool _isStatusError;
+    private Dictionary<string, string> _fieldErrors = [];
+    private string? _selectedCategory;
+    private string? _selectedPriority;
 
     private bool IsEditMode => Id.HasValue;
     private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.FridgeNoteEdit(id)) : AppRoutes.FridgeNotes;
@@ -94,6 +118,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _isMissingNote = false;
+        _fieldErrors = [];
 
         if (Id is Guid id)
         {
@@ -112,18 +137,48 @@ else
             _model = FamilyCollaborationService.CreateFridgeNoteTemplate();
         }
 
-        _dueDate = _model.DueAt ?? DateTime.Today.AddDays(1);
-        _statusMessage = FamilyCollaborationService.LastErrorMessage;
+        _selectedCategory = _model.CreatedAt == default && !IsEditMode ? string.Empty : _model.Category.ToString();
+        _selectedPriority = _model.CreatedAt == default && !IsEditMode ? string.Empty : _model.Priority.ToString();
+        _dueDate = _model.DueAt;
+        SetStatus(FamilyCollaborationService.LastErrorMessage, isError: !string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage), title: "后端同步提醒");
     }
 
     private async Task HandleSubmitAsync()
     {
-        _statusMessage = null;
+        _fieldErrors = [];
+        _model.Title = FamilyCollaborationService.NormalizeUserInput(_model.Title);
+        _model.Content = FamilyCollaborationService.NormalizeUserInput(_model.Content);
         _model.DueAt = _dueDate;
+
+        if (Enum.TryParse<FridgeNoteCategory>(_selectedCategory, true, out var category))
+        {
+            _model.Category = category;
+        }
+
+        if (Enum.TryParse<NotePriority>(_selectedPriority, true, out var priority))
+        {
+            _model.Priority = priority;
+        }
+
+        foreach (var issue in FamilyCollaborationService.ValidateFridgeNote(
+                     _model,
+                     !string.IsNullOrWhiteSpace(_selectedCategory),
+                     !string.IsNullOrWhiteSpace(_selectedPriority)))
+        {
+            _fieldErrors[issue.FieldKey] = issue.Message;
+        }
+
+        if (_fieldErrors.Count > 0)
+        {
+            SetStatus("请先完善标记为必填的字段，再继续保存。", isError: true, title: "表单尚未填写完整");
+            return;
+        }
+
+        SetStatus(null, isError: false);
         await FamilyCollaborationService.SaveFridgeNoteAsync(_model);
         if (!string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage))
         {
-            _statusMessage = FamilyCollaborationService.LastErrorMessage;
+            SetStatus(FamilyCollaborationService.LastErrorMessage, isError: true, title: "保存失败");
             return;
         }
 
@@ -143,14 +198,45 @@ else
             return;
         }
 
-        _statusMessage = null;
+        SetStatus(null, isError: false);
         await FamilyCollaborationService.DeleteFridgeNoteAsync(_model.Id);
         if (!string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage))
         {
-            _statusMessage = FamilyCollaborationService.LastErrorMessage;
+            SetStatus(FamilyCollaborationService.LastErrorMessage, isError: true, title: "删除失败");
             return;
         }
 
         NavigationManager.NavigateTo(AppRoutes.FridgeNotes);
     }
+
+    private bool TryGetFieldError(string fieldKey, out string? error)
+        => _fieldErrors.TryGetValue(fieldKey, out error);
+
+    private void SetStatus(string? message, bool isError, string? title = null)
+    {
+        _statusMessage = message;
+        _statusTitle = title;
+        _isStatusError = isError;
+    }
+
+    private static string GetSelectClass(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "placeholder-selected" : string.Empty;
+
+    private static string GetDateClass(DateTime? value)
+        => value.HasValue ? string.Empty : "placeholder-selected";
+
+    private static string GetCategoryLabel(FridgeNoteCategory category) => category switch
+    {
+        FridgeNoteCategory.Shopping => "购物",
+        FridgeNoteCategory.Reminder => "提醒",
+        FridgeNoteCategory.Message => "留言",
+        _ => "待办",
+    };
+
+    private static string GetPriorityLabel(NotePriority priority) => priority switch
+    {
+        NotePriority.Urgent => "紧急",
+        NotePriority.Important => "重要",
+        _ => "普通",
+    };
 }

@@ -49,6 +49,49 @@ public sealed class StorageConnectionProfileServiceTests
         Assert.Equal(StorageConnectionProfile.DefaultBackendApiBaseUrl, preferences.GetPreferences().StoragePreference.ApiBaseUrl);
     }
 
+    [Fact]
+    public async Task GetActiveProfileAsync_preserves_local_storage_settings_when_backend_profile_is_refreshed()
+    {
+        var preferences = new UserPreferenceService();
+        await preferences.UpdateStoragePreferenceAsync(new StoragePreference
+        {
+            DisplayName = "家庭后端",
+            ApiBaseUrl = "http://localhost:7080",
+            FileServiceBaseUrl = "http://localhost:8999",
+            FileServiceApiPath = "/api",
+            MongoConnectionStringSecretKey = "storage.mongo.connection",
+            MongoConnectionStringPreview = "mongodb://***",
+            MongoDatabaseName = "homehoney",
+            ValidationStatus = StorageValidationStatus.Valid,
+        });
+
+        var httpClient = new HttpClient(new SuccessHandler());
+        var validator = new StorageConfigurationValidator(httpClient);
+
+        var adminClient = new Mock<IAdminStorageApiClient>();
+        adminClient.Setup(x => x.GetProfileAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StorageConnectionProfile
+            {
+                ProfileId = Guid.NewGuid(),
+                DisplayName = "远端后端",
+                ApiBaseUrl = "http://localhost:7080",
+                IsActive = true,
+                ValidationStatus = StorageValidationStatus.Valid,
+                ValidationMessage = "ok",
+            });
+
+        var sut = new StorageConnectionProfileService(preferences, validator, adminClient.Object);
+
+        var profile = await sut.GetActiveProfileAsync();
+
+        Assert.Equal("远端后端", profile.DisplayName);
+        Assert.Equal("http://localhost:8999", profile.FileServiceBaseUrl);
+        Assert.Equal("/api", profile.FileServiceApiPath);
+        Assert.Equal("storage.mongo.connection", profile.MongoConnectionStringSecretKey);
+        Assert.Equal("mongodb://***", profile.MongoConnectionStringPreview);
+        Assert.Equal("homehoney", profile.MongoDatabaseName);
+    }
+
     private sealed class SuccessHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

@@ -5,10 +5,15 @@
 @inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 @using HomeHoney.Components.Shared
+@using System.Globalization
 
 @if (_isMissingRecord)
 {
-    <EmptyState Icon="🛡️" Title="未找到保单" Description="这份保单可能已被删除，返回列表后可以重新选择或新建一条资料。" />
+    <EmptyState Icon="🛡️"
+                Title="未找到保单"
+                Description="这份保单可能已被删除，返回列表后可以重新选择或新建一条资料。"
+                ActionText="返回保险列表"
+                ActionHref="@AppRoutes.InsuranceList" />
 }
 else
 {
@@ -26,56 +31,98 @@ else
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
-            <StatusBanner Message="@_statusMessage" />
+            <StatusBanner Title="@_statusTitle" Message="@_statusMessage" IsError="@_isStatusError" />
         }
 
-        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <EditForm Model="_model" OnSubmit="HandleSubmitAsync">
             <div class="form-grid">
                 <label>
-                    <span>保单名称</span>
-                    <InputText @bind-Value="_model.PolicyName" />
+                    <span>保单名称 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.PolicyName" placeholder="例如：家庭综合医疗险" />
+                    <small class="field-hint">建议填写家人能一眼识别的保单名称。</small>
+                    @if (TryGetFieldError("PolicyName", out var policyNameError))
+                    {
+                        <small class="field-error">@policyNameError</small>
+                    }
                 </label>
                 <label>
-                    <span>保险公司</span>
-                    <InputText @bind-Value="_model.ProviderName" />
+                    <span>保险公司 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.ProviderName" placeholder="例如：平安保险" />
+                    @if (TryGetFieldError("ProviderName", out var providerError))
+                    {
+                        <small class="field-error">@providerError</small>
+                    }
                 </label>
                 <label>
-                    <span>保障类别</span>
-                    <InputSelect @bind-Value="_model.InsuranceCategory">
+                    <span>保障对象 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedMemberId" class="@GetSelectClass(_selectedMemberId)">
+                        <option value="">请选择保障对象</option>
+                        @foreach (var member in _members)
+                        {
+                            <option value="@member.Id.ToString()">@member.DisplayName</option>
+                        }
+                    </InputSelect>
+                    @if (TryGetFieldError("InsuredMemberId", out var memberError))
+                    {
+                        <small class="field-error">@memberError</small>
+                    }
+                </label>
+                <label>
+                    <span>保障类别 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedCategory" class="@GetSelectClass(_selectedCategory)">
+                        <option value="">请选择保障类别</option>
                         @foreach (var value in Enum.GetValues<InsuranceCategory>())
                         {
-                            <option value="@value">@value</option>
+                            <option value="@value.ToString()">@GetCategoryLabel(value)</option>
                         }
                     </InputSelect>
+                    @if (TryGetFieldError("InsuranceCategory", out var categoryError))
+                    {
+                        <small class="field-error">@categoryError</small>
+                    }
                 </label>
                 <label>
-                    <span>状态</span>
-                    <InputSelect @bind-Value="_model.Status">
+                    <span>状态 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedStatus" class="@GetSelectClass(_selectedStatus)">
+                        <option value="">请选择状态</option>
                         @foreach (var value in Enum.GetValues<InsuranceStatus>())
                         {
-                            <option value="@value">@value</option>
+                            <option value="@value.ToString()">@GetStatusLabel(value)</option>
                         }
                     </InputSelect>
+                    @if (TryGetFieldError("Status", out var statusError))
+                    {
+                        <small class="field-error">@statusError</small>
+                    }
                 </label>
                 <label>
-                    <span>生效日期</span>
-                    <InputDate @bind-Value="_model.EffectiveDate" />
+                    <span>生效日期 <span class="field-required">*</span></span>
+                    <InputDate @bind-Value="_effectiveDate" class="@GetDateClass(_effectiveDate)" />
+                    @if (TryGetFieldError("EffectiveDate", out var effectiveDateError))
+                    {
+                        <small class="field-error">@effectiveDateError</small>
+                    }
                 </label>
                 <label>
-                    <span>到期日期</span>
-                    <InputDate @bind-Value="_model.ExpiryDate" />
+                    <span>到期日期 <span class="field-required">*</span></span>
+                    <InputDate @bind-Value="_expiryDate" class="@GetDateClass(_expiryDate)" />
+                    @if (TryGetFieldError("ExpiryDate", out var expiryDateError))
+                    {
+                        <small class="field-error">@expiryDateError</small>
+                    }
                 </label>
                 <label>
                     <span>联系人</span>
-                    <InputText @bind-Value="_model.ContactName" />
+                    <InputText @bind-Value="_model.ContactName" placeholder="例如：专属顾问 王女士" />
                 </label>
                 <label>
                     <span>联系电话</span>
-                    <InputText @bind-Value="_model.ContactPhone" />
+                    <InputText @bind-Value="_model.ContactPhone" placeholder="例如：400-800-0001" />
                 </label>
                 <label class="form-grid-span-2">
                     <span>摘要</span>
-                    <InputTextArea @bind-Value="_model.Summary" />
+                    <InputTextArea @bind-Value="_model.Summary" placeholder="例如：适合作为家庭基础保障，主要覆盖住院与门诊。" />
+                    <small class="field-hint">摘要可留空，后续也可以在详情页继续补充。</small>
                 </label>
             </div>
 
@@ -92,8 +139,17 @@ else
     public Guid? Id { get; set; }
 
     private InsuranceRecord _model = new();
+    private IReadOnlyList<HouseholdMember> _members = [];
     private bool _isMissingRecord;
     private string? _statusMessage;
+    private string? _statusTitle;
+    private bool _isStatusError;
+    private Dictionary<string, string> _fieldErrors = [];
+    private string? _selectedMemberId;
+    private string? _selectedCategory;
+    private string? _selectedStatus;
+    private DateOnly? _effectiveDate;
+    private DateOnly? _expiryDate;
 
     private bool IsEditMode => Id.HasValue;
     private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.InsuranceEdit(id)) : AppRoutes.InsuranceList;
@@ -101,6 +157,8 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _isMissingRecord = false;
+        _fieldErrors = [];
+        _members = DocumentCatalogService.GetMembers();
 
         if (Id is Guid id)
         {
@@ -119,16 +177,59 @@ else
             _model = DocumentCatalogService.CreateInsuranceTemplate();
         }
 
-        _statusMessage = DocumentCatalogService.LastErrorMessage;
+        _selectedMemberId = _model.InsuredMemberId == Guid.Empty ? string.Empty : _model.InsuredMemberId.ToString();
+        _selectedCategory = _model.EffectiveDate == default && !IsEditMode ? string.Empty : _model.InsuranceCategory.ToString();
+        _selectedStatus = _model.ExpiryDate == default && !IsEditMode ? string.Empty : _model.Status.ToString();
+        _effectiveDate = _model.EffectiveDate == default ? null : _model.EffectiveDate;
+        _expiryDate = _model.ExpiryDate == default ? null : _model.ExpiryDate;
+
+        SetStatus(DocumentCatalogService.LastErrorMessage, isError: !string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage), title: "后端同步提醒");
     }
 
     private async Task HandleSubmitAsync()
     {
-        _statusMessage = null;
+        _fieldErrors = [];
+        _model.PolicyName = DocumentCatalogService.NormalizeUserInput(_model.PolicyName);
+        _model.ProviderName = DocumentCatalogService.NormalizeUserInput(_model.ProviderName);
+        _model.ContactName = DocumentCatalogService.NormalizeUserInput(_model.ContactName);
+        _model.ContactPhone = DocumentCatalogService.NormalizeUserInput(_model.ContactPhone);
+        _model.Summary = DocumentCatalogService.NormalizeUserInput(_model.Summary);
+        _model.InsuredMemberId = Guid.TryParse(_selectedMemberId, out var memberId) ? memberId : Guid.Empty;
+        _model.EffectiveDate = _effectiveDate ?? default;
+        _model.ExpiryDate = _expiryDate ?? default;
+
+        if (Enum.TryParse<InsuranceCategory>(_selectedCategory, true, out var category))
+        {
+            _model.InsuranceCategory = category;
+        }
+
+        if (Enum.TryParse<InsuranceStatus>(_selectedStatus, true, out var status))
+        {
+            _model.Status = status;
+        }
+
+        foreach (var issue in DocumentCatalogService.ValidateInsuranceRecord(
+                     _model,
+                     !string.IsNullOrWhiteSpace(_selectedMemberId),
+                     !string.IsNullOrWhiteSpace(_selectedCategory),
+                     !string.IsNullOrWhiteSpace(_selectedStatus),
+                     _effectiveDate.HasValue,
+                     _expiryDate.HasValue))
+        {
+            _fieldErrors[issue.FieldKey] = issue.Message;
+        }
+
+        if (_fieldErrors.Count > 0)
+        {
+            SetStatus("请先完善标记为必填的字段，再继续保存。", isError: true, title: "表单尚未填写完整");
+            return;
+        }
+
+        SetStatus(null, isError: false);
         await DocumentCatalogService.SaveInsuranceRecordAsync(_model);
         if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
         {
-            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            SetStatus(DocumentCatalogService.LastErrorMessage, isError: true, title: "保存失败");
             return;
         }
 
@@ -148,14 +249,47 @@ else
             return;
         }
 
-        _statusMessage = null;
+        SetStatus(null, isError: false);
         await DocumentCatalogService.DeleteInsuranceRecordAsync(_model.Id);
         if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
         {
-            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            SetStatus(DocumentCatalogService.LastErrorMessage, isError: true, title: "删除失败");
             return;
         }
 
         NavigationManager.NavigateTo(AppRoutes.InsuranceList);
     }
+
+    private bool TryGetFieldError(string fieldKey, out string? error)
+        => _fieldErrors.TryGetValue(fieldKey, out error);
+
+    private void SetStatus(string? message, bool isError, string? title = null)
+    {
+        _statusMessage = message;
+        _isStatusError = isError;
+        _statusTitle = title;
+    }
+
+    private static string GetSelectClass(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "placeholder-selected" : string.Empty;
+
+    private static string GetDateClass(DateOnly? value)
+        => value.HasValue ? string.Empty : "placeholder-selected";
+
+    private static string GetCategoryLabel(InsuranceCategory category) => category switch
+    {
+        InsuranceCategory.Medical => "医疗险",
+        InsuranceCategory.CriticalIllness => "重疾险",
+        InsuranceCategory.Accident => "意外险",
+        InsuranceCategory.Life => "寿险",
+        _ => "其他",
+    };
+
+    private static string GetStatusLabel(InsuranceStatus status) => status switch
+    {
+        InsuranceStatus.Active => "生效中",
+        InsuranceStatus.PendingRenewal => "待续保",
+        InsuranceStatus.Expired => "已失效",
+        _ => "已归档",
+    };
 }

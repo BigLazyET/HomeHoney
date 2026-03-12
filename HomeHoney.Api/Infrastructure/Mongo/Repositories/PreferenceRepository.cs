@@ -23,6 +23,8 @@ public sealed class PreferenceRepository
         {
             var existing = await database.GetCollection<UserPreference>(BusinessCollections.UserPreferences)
                 .Find(FilterDefinition<UserPreference>.Empty)
+                .SortByDescending(item => item.StoragePreference.LastValidatedAt)
+                .Limit(1)
                 .FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
             {

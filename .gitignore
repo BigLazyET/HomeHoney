@@ -59,6 +59,7 @@ nunit-*.xml
 .vscode/settings.json
 .idea/
 .dotnet/
+.venv/
 *.user
 *.suo
 *.userprefs

@@ -31,6 +31,8 @@ public sealed class InsuranceRecordDto
 {
     public Guid Id { get; set; }
 
+    public bool HasAttachment => AttachmentCount > 0 || PrimaryFile is not null;
+
     public string PolicyName { get; set; } = string.Empty;
 
     public Guid InsuredMemberId { get; set; }
@@ -67,6 +69,8 @@ public sealed class InsuranceRecordDto
 public sealed class ManualRecordDto
 {
     public Guid Id { get; set; }
+
+    public bool HasAttachment => AttachmentCount > 0 || PrimaryFile is not null;
 
     public string DeviceName { get; set; } = string.Empty;
 

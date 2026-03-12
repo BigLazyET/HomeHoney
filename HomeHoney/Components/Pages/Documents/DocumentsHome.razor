@@ -6,9 +6,12 @@
         <div>
             <span class="page-eyebrow">资料模块</span>
             <h1>按资料类型进入</h1>
-            <p>保险与说明书共用同一套浏览、详情和录入逻辑，先选你今天要处理的内容。</p>
+            <p>保险与说明书共用同一套浏览、详情和录入逻辑，先选你今天要处理的内容；录入后还可以继续查看附件状态、同步时间和后续提醒。</p>
         </div>
-        <a class="button-primary" href="/documents/insurance/new">新增保险</a>
+        <div class="page-actions-inline">
+            <a class="button-primary" href="@AppRoutes.InsuranceNew">新增保险</a>
+            <a class="button-secondary" href="@AppRoutes.ManualNew">新增说明书</a>
+        </div>
     </div>
 
     <div class="module-grid">

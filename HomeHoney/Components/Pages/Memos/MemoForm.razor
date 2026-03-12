@@ -5,106 +5,234 @@
 @using HomeHoney.Models
 @using HomeHoney.Components.Shared
 
-<section class="content-page form-page">
-    <div class="section-heading">
-        <div>
-            <span class="page-eyebrow">备忘录编辑</span>
-            <h1>@(IsEditMode ? "编辑备忘录" : "新增备忘录")</h1>
-            <p>适合记录较长内容、长期计划和需要归档的家庭规则。</p>
-        </div>
-    </div>
+@if (_isMissingMemo)
+{
+    <EmptyState Icon="📝"
+                Title="未找到备忘录"
+                Description="这条备忘录可能已被删除或归档，你可以返回列表重新选择，或直接新建一条。"
+                ActionText="返回备忘录列表"
+                ActionHref="/memos" />
+}
+else
+{
+    <section class="content-page form-page">
+        <PageHeader Eyebrow="备忘录编辑"
+                    Title="@(IsEditMode ? "编辑备忘录" : "新增备忘录")"
+                    Description="适合记录较长内容、长期计划和需要归档的家庭规则。"
+                    BackHref="/memos"
+                    BackText="返回备忘录列表" />
 
-    @if (!string.IsNullOrWhiteSpace(_statusMessage))
-    {
-        <StatusBanner Message="@_statusMessage" />
-    }
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <StatusBanner Title="@_statusTitle" Message="@_statusMessage" IsError="@_isStatusError" />
+        }
 
-    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
-        <div class="form-grid">
-            <label>
-                <span>标题</span>
-                <InputText @bind-Value="_model.Title" />
-            </label>
-            <label>
-                <span>分类</span>
-                <InputSelect @bind-Value="_model.MemoCategory">
-                    @foreach (var value in Enum.GetValues<MemoCategory>())
+        <EditForm Model="_model" OnSubmit="HandleSubmitAsync">
+            <div class="form-grid">
+                <label>
+                    <span>标题 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.Title" placeholder="例如：家庭证件整理计划" />
+                    @if (TryGetFieldError("Title", out var titleError))
                     {
-                        <option value="@value">@value</option>
+                        <small class="field-error">@titleError</small>
                     }
-                </InputSelect>
-            </label>
-            <label>
-                <span>重要级别</span>
-                <InputSelect @bind-Value="_model.Importance">
-                    @foreach (var value in Enum.GetValues<MemoImportance>())
+                </label>
+                <label>
+                    <span>分类 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedCategory" class="@GetSelectClass(_selectedCategory)">
+                        <option value="">请选择分类</option>
+                        @foreach (var value in Enum.GetValues<MemoCategory>())
+                        {
+                            <option value="@value.ToString()">@GetCategoryLabel(value)</option>
+                        }
+                    </InputSelect>
+                    @if (TryGetFieldError("MemoCategory", out var categoryError))
                     {
-                        <option value="@value">@value</option>
+                        <small class="field-error">@categoryError</small>
                     }
-                </InputSelect>
-            </label>
-            <label>
-                <span>状态</span>
-                <InputSelect @bind-Value="_model.Status">
-                    @foreach (var value in Enum.GetValues<MemoStatus>())
+                </label>
+                <label>
+                    <span>重要级别 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedImportance" class="@GetSelectClass(_selectedImportance)">
+                        <option value="">请选择重要级别</option>
+                        @foreach (var value in Enum.GetValues<MemoImportance>())
+                        {
+                            <option value="@value.ToString()">@GetImportanceLabel(value)</option>
+                        }
+                    </InputSelect>
+                    @if (TryGetFieldError("Importance", out var importanceError))
                     {
-                        <option value="@value">@value</option>
+                        <small class="field-error">@importanceError</small>
                     }
-                </InputSelect>
-            </label>
-            <label>
-                <span>到期时间</span>
-                <InputDate @bind-Value="_dueDate" />
-            </label>
-            <label class="form-grid-span-2">
-                <span>内容</span>
-                <InputTextArea @bind-Value="_model.Content" />
-            </label>
-        </div>
+                </label>
+                <label>
+                    <span>状态 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedStatus" class="@GetSelectClass(_selectedStatus)">
+                        <option value="">请选择状态</option>
+                        @foreach (var value in Enum.GetValues<MemoStatus>())
+                        {
+                            <option value="@value.ToString()">@GetStatusLabel(value)</option>
+                        }
+                    </InputSelect>
+                    @if (TryGetFieldError("Status", out var statusError))
+                    {
+                        <small class="field-error">@statusError</small>
+                    }
+                </label>
+                <label>
+                    <span>到期时间</span>
+                    <InputDate @bind-Value="_dueDate" class="@GetDateClass(_dueDate)" />
+                    <small class="field-hint">如暂时没有明确截止时间，可先留空。</small>
+                </label>
+                <label class="form-grid-span-2">
+                    <span>内容 <span class="field-required">*</span></span>
+                    <InputTextArea @bind-Value="_model.Content" placeholder="例如：本月把身份证、户口本、出生证明、保单扫描件统一整理到 HomeHoney。" />
+                    @if (TryGetFieldError("Content", out var contentError))
+                    {
+                        <small class="field-error">@contentError</small>
+                    }
+                </label>
+            </div>
 
-        <div class="page-actions">
-            <a class="button-secondary" href="/memos">取消</a>
-            <button class="button-primary" type="submit">保存</button>
-        </div>
-    </EditForm>
-</section>
+            <div class="page-actions">
+                <a class="button-secondary" href="/memos">取消</a>
+                <button class="button-primary" type="submit">保存</button>
+            </div>
+        </EditForm>
+    </section>
+}
 
 @code {
     [Parameter]
     public Guid? Id { get; set; }
 
     private Memo _model = new();
-    private DateTime _dueDate = DateTime.Today.AddDays(7);
+    private DateTime? _dueDate;
     private string? _statusMessage;
+    private string? _statusTitle;
+    private bool _isStatusError;
+    private bool _isMissingMemo;
+    private Dictionary<string, string> _fieldErrors = [];
+    private string? _selectedCategory;
+    private string? _selectedImportance;
+    private string? _selectedStatus;
 
     private bool IsEditMode => Id.HasValue;
 
     protected override async Task OnParametersSetAsync()
     {
+        _fieldErrors = [];
+        _isMissingMemo = false;
+
         if (Id is Guid id)
         {
-            _model = await FamilyCollaborationService.GetMemoAsync(id) ?? FamilyCollaborationService.CreateMemoTemplate();
+            var existing = await FamilyCollaborationService.GetMemoAsync(id);
+            if (existing is null)
+            {
+                _isMissingMemo = true;
+                _model = FamilyCollaborationService.CreateMemoTemplate();
+                return;
+            }
+
+            _model = existing;
         }
         else
         {
             _model = FamilyCollaborationService.CreateMemoTemplate();
         }
 
-        _dueDate = _model.DueAt ?? DateTime.Today.AddDays(7);
-        _statusMessage = FamilyCollaborationService.LastErrorMessage;
+        _selectedCategory = _model.CreatedAt == default && !IsEditMode ? string.Empty : _model.MemoCategory.ToString();
+        _selectedImportance = _model.CreatedAt == default && !IsEditMode ? string.Empty : _model.Importance.ToString();
+        _selectedStatus = _model.CreatedAt == default && !IsEditMode ? string.Empty : _model.Status.ToString();
+        _dueDate = _model.DueAt;
+        SetStatus(FamilyCollaborationService.LastErrorMessage, isError: !string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage), title: "后端同步提醒");
     }
 
     private async Task HandleSubmitAsync()
     {
-        _statusMessage = null;
+        _fieldErrors = [];
+        _model.Title = FamilyCollaborationService.NormalizeUserInput(_model.Title);
+        _model.Content = FamilyCollaborationService.NormalizeUserInput(_model.Content);
         _model.DueAt = _dueDate;
+
+        if (Enum.TryParse<MemoCategory>(_selectedCategory, true, out var category))
+        {
+            _model.MemoCategory = category;
+        }
+
+        if (Enum.TryParse<MemoImportance>(_selectedImportance, true, out var importance))
+        {
+            _model.Importance = importance;
+        }
+
+        if (Enum.TryParse<MemoStatus>(_selectedStatus, true, out var status))
+        {
+            _model.Status = status;
+        }
+
+        foreach (var issue in FamilyCollaborationService.ValidateMemo(
+                     _model,
+                     !string.IsNullOrWhiteSpace(_selectedCategory),
+                     !string.IsNullOrWhiteSpace(_selectedImportance),
+                     !string.IsNullOrWhiteSpace(_selectedStatus)))
+        {
+            _fieldErrors[issue.FieldKey] = issue.Message;
+        }
+
+        if (_fieldErrors.Count > 0)
+        {
+            SetStatus("请先完善标记为必填的字段，再继续保存。", isError: true, title: "表单尚未填写完整");
+            return;
+        }
+
+        SetStatus(null, isError: false);
         await FamilyCollaborationService.SaveMemoAsync(_model);
         if (!string.IsNullOrWhiteSpace(FamilyCollaborationService.LastErrorMessage))
         {
-            _statusMessage = FamilyCollaborationService.LastErrorMessage;
+            SetStatus(FamilyCollaborationService.LastErrorMessage, isError: true, title: "保存失败");
             return;
         }
 
         NavigationManager.NavigateTo($"/memos/{_model.Id}");
     }
+
+    private bool TryGetFieldError(string fieldKey, out string? error)
+        => _fieldErrors.TryGetValue(fieldKey, out error);
+
+    private void SetStatus(string? message, bool isError, string? title = null)
+    {
+        _statusMessage = message;
+        _statusTitle = title;
+        _isStatusError = isError;
+    }
+
+    private static string GetSelectClass(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "placeholder-selected" : string.Empty;
+
+    private static string GetDateClass(DateTime? value)
+        => value.HasValue ? string.Empty : "placeholder-selected";
+
+    private static string GetCategoryLabel(MemoCategory category) => category switch
+    {
+        MemoCategory.FamilyRule => "家庭规则",
+        MemoCategory.LongTermPlan => "长期计划",
+        MemoCategory.ShoppingPlan => "采购计划",
+        MemoCategory.Medical => "医疗事项",
+        MemoCategory.Education => "教育安排",
+        _ => "其他",
+    };
+
+    private static string GetImportanceLabel(MemoImportance importance) => importance switch
+    {
+        MemoImportance.Critical => "高优先级",
+        MemoImportance.Important => "重要",
+        _ => "普通",
+    };
+
+    private static string GetStatusLabel(MemoStatus status) => status switch
+    {
+        MemoStatus.InProgress => "进行中",
+        MemoStatus.Completed => "已完成",
+        _ => "已归档",
+    };
 }

@@ -19,8 +19,8 @@ else
         }
 
         <PageHeader Eyebrow="说明书详情"
-                    Title="@_record.DeviceName"
-                    Description="@_record.Summary"
+                    Title="@PresentationFallbacks.TextOrFallback(_record.DeviceName, "未命名设备")"
+                    Description="@PresentationFallbacks.TextOrFallback(_record.Summary, "暂未填写说明书摘要。")"
                     BackHref="@AppRoutes.GetParentRoute(AppRoutes.ManualDetail(Id))"
                     BackText="返回说明书列表">
             <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
@@ -31,11 +31,12 @@ else
             <article class="detail-card">
                 <h2>设备信息</h2>
                 <ul>
-                    <li>品牌：@_record.Brand</li>
-                    <li>型号：@_record.Model</li>
-                    <li>类别：@_record.ManualCategory</li>
-                    <li>购买日期：@_record.PurchaseDate.ToString("yyyy-MM-dd")</li>
-                    <li>保修截止：@_record.WarrantyExpiryDate.ToString("yyyy-MM-dd")</li>
+                    <li>品牌：@PresentationFallbacks.TextOrFallback(_record.Brand)</li>
+                    <li>型号：@PresentationFallbacks.TextOrFallback(_record.Model, "暂未填写型号")</li>
+                    <li>类别：@GetCategoryLabel(_record.ManualCategory)</li>
+                    <li>所属空间：@DocumentCatalogService.GetSpaceDisplayName(_record.SpaceId)</li>
+                    <li>购买日期：@PresentationFallbacks.DateOnlyOrFallback(_record.PurchaseDate)</li>
+                    <li>保修截止：@PresentationFallbacks.DateOnlyOrFallback(_record.WarrantyExpiryDate)</li>
                 </ul>
             </article>
             <article class="detail-card">
@@ -43,10 +44,24 @@ else
                 <ul>
                     <li>附件数量：@_record.AttachmentCount</li>
                     <li>文件状态：@GetFileStatusLabel(_record.PrimaryFile)</li>
-                    <li>空间 Id：@_record.SpaceId</li>
-                    <li>标签：@string.Join(" · ", _record.Tags)</li>
+                    <li>标签：@PresentationFallbacks.TagsOrFallback(_record.Tags)</li>
                     <li>适合首页提醒与搜索快速定位</li>
                 </ul>
+
+                <div class="attachment-meta-list">
+                    <div class="attachment-meta-item">
+                        <span>文件名</span>
+                        <strong>@GetAttachmentFileName(_record.PrimaryFile)</strong>
+                    </div>
+                    <div class="attachment-meta-item">
+                        <span>文件大小</span>
+                        <strong>@GetAttachmentFileSize(_record.PrimaryFile)</strong>
+                    </div>
+                    <div class="attachment-meta-item">
+                        <span>最后同步</span>
+                        <strong>@GetLastSyncedLabel(_record.PrimaryFile)</strong>
+                    </div>
+                </div>
 
                 <div class="detail-actions">
                     <label class="button-secondary file-picker-button">
@@ -196,6 +211,32 @@ else
             FileAvailabilityStatus.PendingUpload => "待上传",
             FileAvailabilityStatus.Missing => "文件缺失",
             FileAvailabilityStatus.SyncError => "同步失败",
-            _ => "未上传",
+            _ when file is null => "暂无附件",
+            _ when string.IsNullOrWhiteSpace(file.FileName) => "附件信息待补充",
+            _ => "同步状态未知",
         };
+
+    private static string GetAttachmentFileName(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.TextOrFallback(file.FileName, "附件文件名未知");
+
+    private static string GetAttachmentFileSize(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.FileSizeOrFallback(file.SizeBytes, "文件大小未知");
+
+    private static string GetLastSyncedLabel(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.DateTimeOrFallback(file.LastSyncedAt, "尚未同步");
+
+    private static string GetCategoryLabel(ManualCategory category) => category switch
+    {
+        ManualCategory.Appliance => "家电",
+        ManualCategory.Furniture => "家具",
+        ManualCategory.Electronics => "电子设备",
+        ManualCategory.Kids => "儿童用品",
+        _ => "其他",
+    };
 }

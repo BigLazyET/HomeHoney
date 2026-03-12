@@ -19,8 +19,8 @@ else
         }
 
         <PageHeader Eyebrow="保险详情"
-                    Title="@_record.PolicyName"
-                    Description="@_record.Summary"
+                    Title="@PresentationFallbacks.TextOrFallback(_record.PolicyName, "未命名保单")"
+                    Description="@PresentationFallbacks.TextOrFallback(_record.Summary, "暂未填写保单摘要。")"
                     BackHref="@AppRoutes.GetParentRoute(AppRoutes.InsuranceDetail(Id))"
                     BackText="返回保险列表">
             <button class="button-danger" type="button" @onclick="HandleDeleteAsync">删除资料</button>
@@ -31,22 +31,38 @@ else
             <article class="detail-card">
                 <h2>保障信息</h2>
                 <ul>
-                    <li>保险公司：@_record.ProviderName</li>
+                    <li>保险公司：@PresentationFallbacks.TextOrFallback(_record.ProviderName)</li>
+                    <li>保障对象：@DocumentCatalogService.GetMemberDisplayName(_record.InsuredMemberId)</li>
                     <li>保障类别：@GetCategory(_record.InsuranceCategory)</li>
                     <li>状态：@GetStatus(_record.Status)</li>
-                    <li>生效时间：@_record.EffectiveDate.ToString("yyyy-MM-dd")</li>
-                    <li>到期时间：@_record.ExpiryDate.ToString("yyyy-MM-dd")</li>
+                    <li>生效时间：@PresentationFallbacks.DateOnlyOrFallback(_record.EffectiveDate)</li>
+                    <li>到期时间：@PresentationFallbacks.DateOnlyOrFallback(_record.ExpiryDate)</li>
                 </ul>
             </article>
             <article class="detail-card">
                 <h2>联系人与附件</h2>
                 <ul>
-                    <li>联系人：@_record.ContactName</li>
-                    <li>联系电话：@_record.ContactPhone</li>
+                    <li>联系人：@PresentationFallbacks.TextOrFallback(_record.ContactName)</li>
+                    <li>联系电话：@PresentationFallbacks.TextOrFallback(_record.ContactPhone, "未填写联系电话")</li>
                     <li>附件数量：@_record.AttachmentCount</li>
                     <li>文件状态：@GetFileStatusLabel(_record.PrimaryFile)</li>
-                    <li>标签：@string.Join(" · ", _record.Tags)</li>
+                    <li>标签：@PresentationFallbacks.TagsOrFallback(_record.Tags)</li>
                 </ul>
+
+                <div class="attachment-meta-list">
+                    <div class="attachment-meta-item">
+                        <span>文件名</span>
+                        <strong>@GetAttachmentFileName(_record.PrimaryFile)</strong>
+                    </div>
+                    <div class="attachment-meta-item">
+                        <span>文件大小</span>
+                        <strong>@GetAttachmentFileSize(_record.PrimaryFile)</strong>
+                    </div>
+                    <div class="attachment-meta-item">
+                        <span>最后同步</span>
+                        <strong>@GetLastSyncedLabel(_record.PrimaryFile)</strong>
+                    </div>
+                </div>
 
                 <div class="detail-actions">
                     <label class="button-secondary file-picker-button">
@@ -196,8 +212,25 @@ else
             FileAvailabilityStatus.PendingUpload => "待上传",
             FileAvailabilityStatus.Missing => "文件缺失",
             FileAvailabilityStatus.SyncError => "同步失败",
-            _ => "未上传",
+            _ when file is null => "暂无附件",
+            _ when string.IsNullOrWhiteSpace(file.FileName) => "附件信息待补充",
+            _ => "同步状态未知",
         };
+
+    private static string GetAttachmentFileName(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.TextOrFallback(file.FileName, "附件文件名未知");
+
+    private static string GetAttachmentFileSize(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.FileSizeOrFallback(file.SizeBytes, "文件大小未知");
+
+    private static string GetLastSyncedLabel(FileResource? file)
+        => file is null
+            ? PresentationFallbacks.NotUploaded("PrimaryFile").DisplayText
+            : PresentationFallbacks.DateTimeOrFallback(file.LastSyncedAt, "尚未同步");
 
     private static string GetCategory(InsuranceCategory category) => category switch
     {

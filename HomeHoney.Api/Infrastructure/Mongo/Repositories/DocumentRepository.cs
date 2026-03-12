@@ -23,10 +23,11 @@ public sealed class DocumentRepository
         {
             var items = await database.GetCollection<InsuranceRecord>(DocumentCollections.InsuranceRecords)
                 .Find(FilterDefinition<InsuranceRecord>.Empty)
+                .SortBy(record => record.ExpiryDate)
                 .ToListAsync(cancellationToken);
             if (items.Count > 0)
             {
-                return items.OrderBy(record => record.ExpiryDate).ToList();
+                return items;
             }
         }
 
@@ -34,7 +35,17 @@ public sealed class DocumentRepository
     }
 
     public async Task<InsuranceRecord?> GetInsuranceRecordAsync(Guid id, CancellationToken cancellationToken = default)
-        => (await GetInsuranceRecordsAsync(cancellationToken)).FirstOrDefault(record => record.Id == id);
+    {
+        var database = await _mongoDatabaseFactory.GetDatabaseAsync(cancellationToken);
+        if (database is not null)
+        {
+            return await database.GetCollection<InsuranceRecord>(DocumentCollections.InsuranceRecords)
+                .Find(Builders<InsuranceRecord>.Filter.Eq(item => item.Id, id))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return (await GetInsuranceRecordsAsync(cancellationToken)).FirstOrDefault(record => record.Id == id);
+    }
 
     public async Task<IReadOnlyList<ManualRecord>> GetManualRecordsAsync(CancellationToken cancellationToken = default)
     {
@@ -43,10 +54,12 @@ public sealed class DocumentRepository
         {
             var items = await database.GetCollection<ManualRecord>(DocumentCollections.ManualRecords)
                 .Find(FilterDefinition<ManualRecord>.Empty)
+                .SortBy(record => record.SpaceId)
+                .ThenBy(record => record.Brand)
                 .ToListAsync(cancellationToken);
             if (items.Count > 0)
             {
-                return items.OrderBy(record => record.SpaceId).ToList();
+                return items;
             }
         }
 
@@ -54,7 +67,17 @@ public sealed class DocumentRepository
     }
 
     public async Task<ManualRecord?> GetManualRecordAsync(Guid id, CancellationToken cancellationToken = default)
-        => (await GetManualRecordsAsync(cancellationToken)).FirstOrDefault(record => record.Id == id);
+    {
+        var database = await _mongoDatabaseFactory.GetDatabaseAsync(cancellationToken);
+        if (database is not null)
+        {
+            return await database.GetCollection<ManualRecord>(DocumentCollections.ManualRecords)
+                .Find(Builders<ManualRecord>.Filter.Eq(item => item.Id, id))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return (await GetManualRecordsAsync(cancellationToken)).FirstOrDefault(record => record.Id == id);
+    }
 
     public async Task SaveInsuranceRecordAsync(InsuranceRecord record, CancellationToken cancellationToken = default)
     {

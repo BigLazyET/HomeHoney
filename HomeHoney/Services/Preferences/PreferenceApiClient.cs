@@ -2,12 +2,13 @@ using System.Net.Http.Json;
 using HomeHoney.Models;
 using HomeHoney.Services.Storage;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HomeHoney.Services.Preferences;
 
 public sealed class PreferenceApiClient : IPreferenceApiClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
     private readonly BackendApiHttpClientFactory _httpClientFactory;
 
     public PreferenceApiClient(BackendApiHttpClientFactory httpClientFactory)
@@ -24,7 +25,7 @@ public sealed class PreferenceApiClient : IPreferenceApiClient
             return null;
         }
 
-        var dto = await response.Content.ReadFromJsonAsync<UserPreferenceDto>(cancellationToken: cancellationToken);
+        var dto = await response.Content.ReadFromJsonAsync<UserPreferenceDto>(JsonOptions, cancellationToken);
         return dto is null ? null : Map(dto);
     }
 
@@ -141,4 +142,11 @@ public sealed class PreferenceApiClient : IPreferenceApiClient
                 ValidationMessage = model.StoragePreference.ValidationMessage,
             },
         };
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
 }

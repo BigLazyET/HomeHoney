@@ -1,14 +1,13 @@
 <!--
   === 同步影响报告 ===
-  版本变更：1.0.0 → 2.0.0 (MAJOR)
-  变更理由：技术平台从 Blazor WebAssembly 变更为 .NET MAUI Blazor Hybrid，属于不兼容架构变更
+  版本变更：2.0.0 → 3.0.0 (MAJOR)
+  变更理由：删除“离线优先 + 本地 SQLite/文件系统”核心原则，并将章程边界调整为与当前后端托管存储架构一致
   修改的原则：
-    - I. 组件化架构：Blazor 组件 → MAUI Blazor Hybrid 组件（新增原生服务层指导）
-    - III. 离线可用 → 离线优先：浏览器存储 → SQLite 本地数据库
-    - IV. 类型安全与可测试性：新增平台服务 mock 要求
-    - V. 用户体验优先 → 移动端优先的用户体验：响应式 Web → 移动端原生优先
+    - 删除 III. 离线优先（Offline-First）
+    - IV. 类型安全与可测试性 → III. 类型安全与可测试性（移除 SQLite 特定表述）
+    - V. 移动端优先的用户体验 → IV. 移动端优先的用户体验
   新增章节：无
-  删除章节：无
+  删除章节：III. 离线优先（Offline-First）
   模板更新状态：
     ✅ .specify/templates/plan-template.md — 无需修改，Constitution Check 动态引用
     ✅ .specify/templates/spec-template.md — 无需修改
@@ -41,30 +40,19 @@
 
 **理由**：这是一个文档管理系统，数据模型的严谨性直接决定后续检索、提醒、统计等功能的可实现性。
 
-### III. 离线优先（Offline-First）
-
-应用必须（MUST）默认以离线模式运行，所有核心数据存储在设备本地：
-
-- 文档列表、详情和附件必须（MUST）持久化到本地 SQLite 数据库
-- 应用在无网络时必须（MUST）完全可用（浏览、搜索、新增文档）
-- 当网络可用时，应（SHOULD）支持将数据同步到云端备份；冲突以"最后写入优先"策略处理
-- 文档附件（图片、PDF）必须（MUST）存储在设备本地文件系统，通过 MAUI `FileSystem` API 管理
-
-**理由**：作为原生 App，本地存储能力远超浏览器。家庭场景下用户随时需要查看保修信息或保单条款，不应依赖网络。
-
-### IV. 类型安全与可测试性（Type Safety & Testability）
+### III. 类型安全与可测试性（Type Safety & Testability）
 
 所有业务逻辑必须（MUST）使用 C# 强类型编写，禁止使用 `dynamic` 或绕过编译器类型检查：
 
 - 服务层必须通过接口（`interface`）定义契约，支持依赖注入和单元测试的 mock 替换
-- 平台相关服务（相机、文件系统、SQLite 等）必须（MUST）通过接口抽象，以便在单元测试中 mock
+- 平台相关服务（相机、文件系统等）必须（MUST）通过接口抽象，以便在单元测试中 mock
 - 每个服务至少包含针对核心方法的单元测试
 - Blazor 组件应（SHOULD）使用 bUnit 进行组件级测试
 - 集成测试应（SHOULD）覆盖关键的用户端到端流程
 
 **理由**：C# 的强类型系统是 .NET 生态的核心优势。MAUI Hybrid 架构中平台服务与 UI 解耦后，业务逻辑可完全在非设备环境中测试。
 
-### V. 移动端优先的用户体验（Mobile-First UX）
+### IV. 移动端优先的用户体验（Mobile-First UX）
 
 面向家庭成员（包括非技术用户）的界面必须（MUST）遵循以下原则：
 
@@ -88,7 +76,7 @@
 - **构建工具**：`dotnet` CLI + 各平台 SDK（Xcode / Android SDK）
 - **测试框架**：xUnit + bUnit（UI 组件）+ Moq（设备服务 mock）
 - **包管理**：NuGet
-- **本地存储**：SQLite（通过 `sqlite-net-pcl` 或 EF Core SQLite）
+- **数据边界**：移动端通过 `HomeHoney.Api` 访问业务数据与附件能力；本地仅保留必要的偏好与安全配置
 - **部署模式**：
   - iOS → App Store（需 Apple Developer 账号）
   - Android → Google Play（需 Google Play Developer 账号）
@@ -113,4 +101,4 @@
 - **版本策略**：遵循语义化版本控制（SemVer）——MAJOR 代表原则删除或不兼容变更，MINOR 代表新增原则或重要扩展，PATCH 代表措辞和格式修正
 - **合规检查**：每次 `/speckit.plan` 执行时会自动校验 Constitution Check，违反原则的设计必须提供书面理由或调整方案
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-09 | **Last Amended**: 2026-03-09
+**Version**: 3.0.0 | **Ratified**: 2026-03-09 | **Last Amended**: 2026-03-12

@@ -27,13 +27,13 @@
         <div class="sticky-board">
             @foreach (var note in _notes)
             {
-                <a class="sticky-note sticky-note-@note.ColorStyle" href="@AppRoutes.FridgeNoteEdit(note.Id)">
+                <a class="sticky-note sticky-note-@FamilyCollaborationService.GetNoteColorStyle(note)" href="@AppRoutes.FridgeNoteEdit(note.Id)">
                     <div class="sticky-note-top">
-                        <span>@note.Category</span>
+                        <span>@GetCategory(note.Category)</span>
                         <span>@GetPriority(note.Priority)</span>
                     </div>
-                    <h3>@note.Title</h3>
-                    <p>@note.Content</p>
+                    <h3>@PresentationFallbacks.TextOrFallback(note.Title, "未命名冰箱贴")</h3>
+                    <p>@PresentationFallbacks.TextOrFallback(note.Content, "这条冰箱贴还没有填写具体内容。")</p>
                     <div class="sticky-note-footer">
                         @if (note.DueAt is DateTime dueAt)
                         {
@@ -62,5 +62,13 @@
         NotePriority.Urgent => "紧急",
         NotePriority.Important => "重要",
         _ => "普通",
+    };
+
+    private static string GetCategory(FridgeNoteCategory category) => category switch
+    {
+        FridgeNoteCategory.Shopping => "购物",
+        FridgeNoteCategory.Reminder => "提醒",
+        FridgeNoteCategory.Message => "留言",
+        _ => "待办",
     };
 }

@@ -7,6 +7,15 @@
     }
     <h2 class="empty-state-title">@Title</h2>
     <p class="empty-state-description">@Description</p>
+
+    @if (!string.IsNullOrWhiteSpace(ActionText) && OnAction.HasDelegate)
+    {
+        <button class="button-secondary empty-state-action" type="button" @onclick="OnAction">@ActionText</button>
+    }
+    else if (!string.IsNullOrWhiteSpace(ActionText) && !string.IsNullOrWhiteSpace(ActionHref))
+    {
+        <a class="button-secondary empty-state-action" href="@ActionHref">@ActionText</a>
+    }
 </div>
 
 @code {
@@ -18,4 +27,13 @@
 
     [Parameter]
     public string Description { get; set; } = "还没有文档，点击添加";
+
+    [Parameter]
+    public string? ActionText { get; set; }
+
+    [Parameter]
+    public string? ActionHref { get; set; }
+
+    [Parameter]
+    public EventCallback OnAction { get; set; }
 }

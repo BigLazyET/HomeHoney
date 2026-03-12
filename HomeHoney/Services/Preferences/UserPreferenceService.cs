@@ -3,12 +3,20 @@ using HomeHoney.Services.Diagnostics;
 using HomeHoney.Services.Storage;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HomeHoney.Services.Preferences;
 
 public sealed class UserPreferenceService
 {
     private const string PreferenceStorageKey = "homehoney.user-preferences";
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static readonly IReadOnlyList<HomeModuleType> SupportedHomeModules =
+    [
+        HomeModuleType.QuickActions,
+        HomeModuleType.UpcomingReminders,
+    ];
+
     private readonly UserPreference _preferences = new();
     private readonly IServiceProvider? _serviceProvider;
 
@@ -28,91 +36,93 @@ public sealed class UserPreferenceService
 
     public bool ShouldShowOnboardingOnStartup() => !_preferences.OnboardingCompleted;
 
-    public Task CompleteOnboardingAsync()
+    public async Task CompleteOnboardingAsync()
     {
         _preferences.OnboardingCompleted = true;
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        await NotifyStateChangedAsync();
     }
 
-    public Task SetThemeModeAsync(ThemeMode themeMode)
+    public async Task SetThemeModeAsync(ThemeMode themeMode)
     {
         _preferences.ThemeMode = themeMode;
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        await NotifyStateChangedAsync();
     }
 
-    public Task SetPrivacyModeAsync(PrivacyMode privacyMode)
+    public async Task SetPrivacyModeAsync(PrivacyMode privacyMode)
     {
         _preferences.PrivacyMode = privacyMode;
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        await NotifyStateChangedAsync();
     }
 
-    public Task UpdateNotificationSettingsAsync(NotificationPreference notificationPreference)
+    public async Task UpdateNotificationSettingsAsync(NotificationPreference notificationPreference)
     {
         _preferences.NotificationSettings = notificationPreference ?? new NotificationPreference();
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        await NotifyStateChangedAsync();
     }
 
-    public Task UpdateStoragePreferenceAsync(StoragePreference storagePreference)
+    public async Task UpdateStoragePreferenceAsync(StoragePreference storagePreference)
     {
         _preferences.StoragePreference = storagePreference ?? new StoragePreference();
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        await NotifyStateChangedAsync();
     }
 
-    public Task SetModuleVisibilityAsync(HomeModuleType moduleType, bool isVisible)
+    public async Task SetModuleVisibilityAsync(HomeModuleType moduleType, bool isVisible)
     {
+        var changed = false;
         if (isVisible)
         {
-            _preferences.HiddenHomeModules.Remove(moduleType);
+            changed = _preferences.HiddenHomeModules.Remove(moduleType);
         }
         else
         {
-            _preferences.HiddenHomeModules.Add(moduleType);
+            changed = _preferences.HiddenHomeModules.Add(moduleType);
         }
 
-        NotifyStateChanged();
-        return Task.CompletedTask;
+        if (changed)
+        {
+            await NotifyStateChangedAsync();
+        }
     }
 
-    public Task MoveModuleUpAsync(HomeModuleType moduleType)
+    public async Task MoveModuleUpAsync(HomeModuleType moduleType)
     {
-        MoveModule(moduleType, -1);
-        return Task.CompletedTask;
+        if (MoveModule(moduleType, -1))
+        {
+            await NotifyStateChangedAsync();
+        }
     }
 
-    public Task MoveModuleDownAsync(HomeModuleType moduleType)
+    public async Task MoveModuleDownAsync(HomeModuleType moduleType)
     {
-        MoveModule(moduleType, 1);
-        return Task.CompletedTask;
+        if (MoveModule(moduleType, 1))
+        {
+            await NotifyStateChangedAsync();
+        }
     }
 
-    private void MoveModule(HomeModuleType moduleType, int delta)
+    private bool MoveModule(HomeModuleType moduleType, int delta)
     {
         var order = _preferences.HomeModuleOrder;
         var index = order.IndexOf(moduleType);
         if (index < 0)
         {
-            return;
+            return false;
         }
 
         var nextIndex = index + delta;
         if (nextIndex < 0 || nextIndex >= order.Count)
         {
-            return;
+            return false;
         }
 
         (order[index], order[nextIndex]) = (order[nextIndex], order[index]);
-        NotifyStateChanged();
+        return true;
     }
 
-    private void NotifyStateChanged()
+    private async Task NotifyStateChangedAsync()
     {
         Save();
-        SaveRemote();
+        await SaveRemoteAsync();
         Changed?.Invoke();
     }
 
@@ -123,7 +133,7 @@ public sealed class UserPreferenceService
             var raw = PlatformPreferenceStore.GetString(PreferenceStorageKey);
             if (!string.IsNullOrWhiteSpace(raw))
             {
-                var saved = JsonSerializer.Deserialize<UserPreference>(raw);
+                var saved = JsonSerializer.Deserialize<UserPreference>(raw, JsonOptions);
                 if (saved is not null)
                 {
                     Apply(saved);
@@ -141,7 +151,7 @@ public sealed class UserPreferenceService
     {
         try
         {
-            var raw = JsonSerializer.Serialize(_preferences);
+            var raw = JsonSerializer.Serialize(_preferences, JsonOptions);
             PlatformPreferenceStore.SetString(PreferenceStorageKey, raw);
         }
         catch (Exception ex)
@@ -151,7 +161,7 @@ public sealed class UserPreferenceService
         }
     }
 
-    private void SaveRemote()
+    private async Task SaveRemoteAsync()
     {
         try
         {
@@ -159,7 +169,7 @@ public sealed class UserPreferenceService
             var preferenceApiClient = _serviceProvider?.GetService(typeof(IPreferenceApiClient)) as IPreferenceApiClient;
             if (preferenceApiClient is not null)
             {
-                preferenceApiClient.UpdateAsync(_preferences).GetAwaiter().GetResult();
+                await preferenceApiClient.UpdateAsync(_preferences);
             }
         }
         catch (Exception ex)
@@ -170,14 +180,39 @@ public sealed class UserPreferenceService
         }
     }
 
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
     private void Apply(UserPreference saved)
     {
         _preferences.ThemeMode = saved.ThemeMode;
         _preferences.NotificationSettings = saved.NotificationSettings ?? new NotificationPreference();
-        _preferences.HomeModuleOrder = saved.HomeModuleOrder.Count > 0 ? saved.HomeModuleOrder : _preferences.HomeModuleOrder;
-        _preferences.HiddenHomeModules = saved.HiddenHomeModules.Count > 0 ? saved.HiddenHomeModules : [];
+        _preferences.HomeModuleOrder = NormalizeModuleOrder(saved.HomeModuleOrder);
+        _preferences.HiddenHomeModules = [.. saved.HiddenHomeModules.Where(SupportedHomeModules.Contains)];
         _preferences.PrivacyMode = saved.PrivacyMode;
         _preferences.OnboardingCompleted = saved.OnboardingCompleted;
         _preferences.StoragePreference = saved.StoragePreference ?? new StoragePreference();
+    }
+
+    private static List<HomeModuleType> NormalizeModuleOrder(IReadOnlyList<HomeModuleType>? order)
+    {
+        var normalized = (order ?? [])
+            .Where(SupportedHomeModules.Contains)
+            .Distinct()
+            .ToList();
+
+        foreach (var module in SupportedHomeModules)
+        {
+            if (!normalized.Contains(module))
+            {
+                normalized.Add(module);
+            }
+        }
+
+        return normalized;
     }
 }

@@ -60,9 +60,6 @@ public sealed class UserPreference
     [
         HomeModuleType.QuickActions,
         HomeModuleType.UpcomingReminders,
-        HomeModuleType.RecentDocuments,
-        HomeModuleType.FamilyMessages,
-        HomeModuleType.RecommendedActions,
     ];
 
     public HashSet<HomeModuleType> HiddenHomeModules { get; set; } = [];

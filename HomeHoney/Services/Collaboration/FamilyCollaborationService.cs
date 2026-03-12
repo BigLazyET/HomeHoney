@@ -10,52 +10,11 @@ public sealed class FamilyCollaborationService
 {
     public string? LastErrorMessage { get; private set; }
 
-    private readonly List<FridgeNote> _fridgeNotes =
-    [
-        new()
-        {
-            Id = Guid.Parse("7b7d9983-8f89-49b4-8fd1-9cbf00221001"),
-            Title = "周末采购",
-            Content = "牛奶、鸡蛋、厨房纸、猫粮",
-            Category = FridgeNoteCategory.Shopping,
-            Priority = NotePriority.Important,
-            ColorStyle = "yellow",
-            IsPinned = true,
-            DueAt = DateTime.Today.AddDays(1).AddHours(10),
-        },
-        new()
-        {
-            Id = Guid.Parse("7b7d9983-8f89-49b4-8fd1-9cbf00221002"),
-            Title = "接娃提醒",
-            Content = "周三 17:20 幼儿园门口接孩子，记得带校服袋。",
-            Category = FridgeNoteCategory.Reminder,
-            Priority = NotePriority.Urgent,
-            ColorStyle = "pink",
-            DueAt = DateTime.Today.AddDays(2).AddHours(17),
-        },
-    ];
+    private const string RequiredFieldCode = "required";
 
-    private readonly List<Memo> _memos =
-    [
-        new()
-        {
-            Id = Guid.Parse("0d83f8fe-91ee-4f16-92bb-3ce2c1931001"),
-            Title = "家庭证件整理计划",
-            Content = "本月把身份证、户口本、出生证明、保单扫描件统一整理到 HomeHoney。",
-            MemoCategory = MemoCategory.LongTermPlan,
-            Importance = MemoImportance.Important,
-            DueAt = DateTime.Today.AddDays(10),
-        },
-        new()
-        {
-            Id = Guid.Parse("0d83f8fe-91ee-4f16-92bb-3ce2c1931002"),
-            Title = "儿童疫苗记录补充",
-            Content = "下次社区门诊前确认疫苗本、医保卡、既往病史备忘已同步。",
-            MemoCategory = MemoCategory.Medical,
-            Importance = MemoImportance.Critical,
-            DueAt = DateTime.Today.AddDays(6),
-        },
-    ];
+    private readonly List<FridgeNote> _fridgeNotes = [];
+
+    private readonly List<Memo> _memos = [];
 
     private readonly IStorageConnectionProfileService? _storageConnectionProfileService;
     private readonly ICollaborationApiClient? _collaborationApiClient;
@@ -126,6 +85,8 @@ public sealed class FamilyCollaborationService
     public async Task SaveFridgeNoteAsync(FridgeNote fridgeNote)
     {
         LastErrorMessage = null;
+        NormalizeFridgeNote(fridgeNote);
+        fridgeNote.CreatedAt = fridgeNote.CreatedAt == default ? DateTime.Now : fridgeNote.CreatedAt;
         fridgeNote.UpdatedAt = DateTime.Now;
 
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
@@ -170,6 +131,8 @@ public sealed class FamilyCollaborationService
     public async Task SaveMemoAsync(Memo memo)
     {
         LastErrorMessage = null;
+        NormalizeMemo(memo);
+        memo.CreatedAt = memo.CreatedAt == default ? DateTime.Now : memo.CreatedAt;
         memo.UpdatedAt = DateTime.Now;
 
         if (await UseBackendApiAsync() && _collaborationApiClient is not null)
@@ -244,9 +207,88 @@ public sealed class FamilyCollaborationService
         return true;
     }
 
-    public FridgeNote CreateFridgeNoteTemplate() => new() { DueAt = DateTime.Today.AddDays(1).AddHours(18) };
+    public FridgeNote CreateFridgeNoteTemplate() => new()
+    {
+        Id = Guid.NewGuid(),
+        DueAt = null,
+        ColorStyle = string.Empty,
+    };
 
-    public Memo CreateMemoTemplate() => new() { DueAt = DateTime.Today.AddDays(7).AddHours(9) };
+    public Memo CreateMemoTemplate() => new()
+    {
+        Id = Guid.NewGuid(),
+        DueAt = null,
+    };
+
+    public IReadOnlyList<ValidationIssue> ValidateFridgeNote(FridgeNote note, bool hasCategorySelection = true, bool hasPrioritySelection = true)
+    {
+        var issues = new List<ValidationIssue>();
+
+        if (string.IsNullOrWhiteSpace(note.Title))
+        {
+            issues.Add(new("Title", "请填写标题。", Code: RequiredFieldCode));
+        }
+
+        if (string.IsNullOrWhiteSpace(note.Content))
+        {
+            issues.Add(new("Content", "请填写内容。", Code: RequiredFieldCode));
+        }
+
+        if (!hasCategorySelection)
+        {
+            issues.Add(new("Category", "请选择冰箱贴分类。", Code: RequiredFieldCode));
+        }
+
+        if (!hasPrioritySelection)
+        {
+            issues.Add(new("Priority", "请选择优先级。", Code: RequiredFieldCode));
+        }
+
+        return issues;
+    }
+
+    public IReadOnlyList<ValidationIssue> ValidateMemo(Memo memo, bool hasCategorySelection = true, bool hasImportanceSelection = true, bool hasStatusSelection = true)
+    {
+        var issues = new List<ValidationIssue>();
+
+        if (string.IsNullOrWhiteSpace(memo.Title))
+        {
+            issues.Add(new("Title", "请填写标题。", Code: RequiredFieldCode));
+        }
+
+        if (string.IsNullOrWhiteSpace(memo.Content))
+        {
+            issues.Add(new("Content", "请填写内容。", Code: RequiredFieldCode));
+        }
+
+        if (!hasCategorySelection)
+        {
+            issues.Add(new("MemoCategory", "请选择分类。", Code: RequiredFieldCode));
+        }
+
+        if (!hasImportanceSelection)
+        {
+            issues.Add(new("Importance", "请选择重要级别。", Code: RequiredFieldCode));
+        }
+
+        if (!hasStatusSelection)
+        {
+            issues.Add(new("Status", "请选择当前状态。", Code: RequiredFieldCode));
+        }
+
+        return issues;
+    }
+
+    public string GetNoteColorStyle(FridgeNote note)
+        => !string.IsNullOrWhiteSpace(note.ColorStyle) ? note.ColorStyle : note.Priority switch
+        {
+            NotePriority.Urgent => "pink",
+            NotePriority.Important => "yellow",
+            _ => "blue",
+        };
+
+    public static string NormalizeUserInput(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
     public async Task SetFridgeNoteCompletedAsync(Guid id, bool isCompleted)
     {
@@ -305,8 +347,8 @@ public sealed class FamilyCollaborationService
 
     public IEnumerable<CollaborationSummary> GetRecentMessages(int maxItems = 3)
     {
-        var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, note.Title, note.Content, AppRoutes.FridgeNoteEdit(note.Id), note.Priority.ToString(), note.DueAt));
-        var memos = _memos.Select(memo => new CollaborationSummary(memo.Id, memo.Title, memo.Content, AppRoutes.MemoDetail(memo.Id), memo.Importance.ToString(), memo.DueAt));
+        var fridge = _fridgeNotes.Select(note => new CollaborationSummary(note.Id, PresentationFallbacks.TextOrFallback(note.Title, "未命名冰箱贴"), PresentationFallbacks.TextOrFallback(note.Content, "暂未填写摘要"), AppRoutes.FridgeNoteEdit(note.Id), note.Priority.ToString(), note.DueAt));
+        var memos = _memos.Select(memo => new CollaborationSummary(memo.Id, PresentationFallbacks.TextOrFallback(memo.Title, "未命名备忘录"), PresentationFallbacks.TextOrFallback(memo.Content, "暂未填写摘要"), AppRoutes.MemoDetail(memo.Id), memo.Importance.ToString(), memo.DueAt));
         return fridge.Concat(memos).OrderBy(item => item.DueAt ?? DateTime.MaxValue).Take(maxItems).ToList();
     }
 
@@ -330,6 +372,19 @@ public sealed class FamilyCollaborationService
     {
         target.Clear();
         target.AddRange(source);
+    }
+
+    private void NormalizeFridgeNote(FridgeNote fridgeNote)
+    {
+        fridgeNote.Title = NormalizeUserInput(fridgeNote.Title);
+        fridgeNote.Content = NormalizeUserInput(fridgeNote.Content);
+        fridgeNote.ColorStyle = GetNoteColorStyle(fridgeNote);
+    }
+
+    private static void NormalizeMemo(Memo memo)
+    {
+        memo.Title = NormalizeUserInput(memo.Title);
+        memo.Content = NormalizeUserInput(memo.Content);
     }
 }
 

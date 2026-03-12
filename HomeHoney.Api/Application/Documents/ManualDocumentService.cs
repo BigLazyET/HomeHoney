@@ -2,6 +2,7 @@ using HomeHoney.Api.Contracts.Common;
 using HomeHoney.Api.Contracts.Documents;
 using HomeHoney.Api.Infrastructure.FileBrowser;
 using HomeHoney.Api.Infrastructure.Mongo.Repositories;
+using HomeHoney.Models;
 
 namespace HomeHoney.Api.Application.Documents;
 
@@ -17,12 +18,16 @@ public sealed class ManualDocumentService
     }
 
     public async Task<IReadOnlyList<ManualRecordDto>> GetAllAsync(CancellationToken cancellationToken = default)
-        => (await _documentRepository.GetManualRecordsAsync(cancellationToken)).Select(FileStateEvaluator.ApplyState).Select(DocumentDtoMapper.ToDto).ToList();
+        => (await _documentRepository.GetManualRecordsAsync(cancellationToken))
+            .Select(FileStateEvaluator.ApplyState)
+            .Select(EnsureAttachmentMetadata)
+            .Select(DocumentDtoMapper.ToDto)
+            .ToList();
 
     public async Task<ManualRecordDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var record = await _documentRepository.GetManualRecordAsync(id, cancellationToken);
-        return record is null ? null : DocumentDtoMapper.ToDto(FileStateEvaluator.ApplyState(record));
+        return record is null ? null : DocumentDtoMapper.ToDto(EnsureAttachmentMetadata(FileStateEvaluator.ApplyState(record)));
     }
 
     public async Task<ApiOperationResult<ManualRecordDto>> SaveAsync(UpsertManualDocumentRequest request, CancellationToken cancellationToken = default)
@@ -62,12 +67,25 @@ public sealed class ManualDocumentService
         var operation = result.IsSuccess
             ? ApiOperationResult.Success("upload-manual-file", result.Message, targetType: "manual", targetId: documentId)
             : ApiOperationResult.Failure("upload-manual-file", result.Message, "upload_failed", targetType: "manual", targetId: documentId);
-        return new(operation, DocumentDtoMapper.ToDto(record));
+        return new(operation, DocumentDtoMapper.ToDto(EnsureAttachmentMetadata(record)));
     }
 
     public async Task<FileBrowserDownloadResult> DownloadFileAsync(Guid documentId, CancellationToken cancellationToken = default)
     {
         var record = await _documentRepository.GetManualRecordAsync(documentId, cancellationToken);
         return await _documentFileOrchestrator.DownloadPrimaryFileAsync(record?.PrimaryFile?.ExternalPath, cancellationToken);
+    }
+
+    private static ManualRecord EnsureAttachmentMetadata(ManualRecord record)
+    {
+        if (record.PrimaryFile is null)
+        {
+            return record;
+        }
+
+        record.PrimaryFile.FileName = string.IsNullOrWhiteSpace(record.PrimaryFile.FileName) ? "附件信息待补充" : record.PrimaryFile.FileName;
+        record.PrimaryFile.LastSyncedAt ??= record.LastUpdatedAt == default ? DateTime.UtcNow : record.LastUpdatedAt;
+        record.PrimaryFile.StatusMessage ??= record.SyncMessage;
+        return record;
     }
 }

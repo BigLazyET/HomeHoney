@@ -35,10 +35,11 @@ public static class FileStateEvaluator
     {
         resource.ExternalPath = result.RemotePath;
         resource.ExternalFileId = result.RemoteId;
+        resource.FileName = string.IsNullOrWhiteSpace(result.FileName) ? resource.FileName : result.FileName;
         resource.ContentType = result.ContentType ?? resource.ContentType;
         resource.SizeBytes = result.SizeBytes ?? resource.SizeBytes;
         resource.AvailabilityStatus = result.AvailabilityStatus;
-        resource.LastSyncedAt = DateTime.UtcNow;
+        resource.LastSyncedAt = result.LastSyncedAt ?? DateTime.UtcNow;
         resource.StatusMessage = result.Message;
     }
 

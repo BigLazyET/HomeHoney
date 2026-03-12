@@ -10,6 +10,8 @@ public sealed class DocumentCatalogService
 {
     public string? LastErrorMessage { get; private set; }
 
+    private const string RequiredFieldCode = "required";
+
     private readonly List<InsuranceRecord> _insuranceRecords;
     private readonly List<ManualRecord> _manualRecords;
     private readonly List<HouseholdMember> _members;
@@ -57,106 +59,8 @@ public sealed class DocumentCatalogService
         ]);
 
         _insuranceRecords.Clear();
-        _insuranceRecords.AddRange(
-        [
-            new()
-            {
-                Id = Guid.Parse("9a7eb129-a0a3-4f2c-bae0-4dc8f56d1001"),
-                PolicyName = "家庭综合医疗险",
-                InsuredMemberId = _members[0].Id,
-                InsuranceCategory = InsuranceCategory.Medical,
-                Status = InsuranceStatus.Active,
-                EffectiveDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-2)),
-                ExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(5)),
-                ProviderName = "平安保险",
-                ContactName = "专属顾问 王女士",
-                ContactPhone = "400-800-0001",
-                Summary = "覆盖住院、门诊与意外医疗，适合作为家庭基础保障。",
-                AttachmentCount = 1,
-                PrimaryFile = new FileResource
-                {
-                    FileName = "family-medical-policy.pdf",
-                    ExternalPath = "seed/insurance/family-medical-policy.pdf",
-                    AvailabilityStatus = FileAvailabilityStatus.Available,
-                    ContentType = "application/pdf",
-                    SizeBytes = 512000,
-                },
-                Tags = ["医疗", "年度续保", "家庭"]
-            },
-            new()
-            {
-                Id = Guid.Parse("9a7eb129-a0a3-4f2c-bae0-4dc8f56d1002"),
-                PolicyName = "儿童意外险",
-                InsuredMemberId = _members[1].Id,
-                InsuranceCategory = InsuranceCategory.Accident,
-                Status = InsuranceStatus.PendingRenewal,
-                EffectiveDate = DateOnly.FromDateTime(DateTime.Today.AddYears(-1)),
-                ExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddDays(18)),
-                ProviderName = "中国人保",
-                ContactName = "理赔热线",
-                ContactPhone = "95518",
-                Summary = "儿童日常意外、骨折与门急诊意外保障。",
-                AttachmentCount = 1,
-                PrimaryFile = new FileResource
-                {
-                    FileName = "kids-accident-policy.pdf",
-                    ExternalPath = "seed/insurance/kids-accident-policy.pdf",
-                    AvailabilityStatus = FileAvailabilityStatus.Available,
-                    ContentType = "application/pdf",
-                    SizeBytes = 384000,
-                },
-                Tags = ["儿童", "意外", "即将到期"]
-            },
-        ]);
 
         _manualRecords.Clear();
-        _manualRecords.AddRange(
-        [
-            new()
-            {
-                Id = Guid.Parse("00ab2f67-1f54-4080-b8ae-9c70426f1001"),
-                DeviceName = "海尔冰箱",
-                Brand = "Haier",
-                Model = "BCD-501WGHFD14S8U1",
-                SpaceId = _spaces[0].Id,
-                ManualCategory = ManualCategory.Appliance,
-                PurchaseDate = DateOnly.FromDateTime(DateTime.Today.AddYears(-1)),
-                WarrantyExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddYears(2)),
-                Summary = "冰箱说明书、保养建议与故障代码索引。",
-                AttachmentCount = 1,
-                PrimaryFile = new FileResource
-                {
-                    FileName = "haier-fridge-manual.pdf",
-                    ExternalPath = "seed/manuals/haier-fridge-manual.pdf",
-                    AvailabilityStatus = FileAvailabilityStatus.Available,
-                    ContentType = "application/pdf",
-                    SizeBytes = 256000,
-                },
-                Tags = ["厨房", "冰箱", "保修中"]
-            },
-            new()
-            {
-                Id = Guid.Parse("00ab2f67-1f54-4080-b8ae-9c70426f1002"),
-                DeviceName = "米家空气净化器",
-                Brand = "Xiaomi",
-                Model = "AC-M14-SC",
-                SpaceId = _spaces[1].Id,
-                ManualCategory = ManualCategory.Electronics,
-                PurchaseDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-8)),
-                WarrantyExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(16)),
-                Summary = "滤芯更换周期、联网说明与常见故障处理。",
-                AttachmentCount = 1,
-                PrimaryFile = new FileResource
-                {
-                    FileName = "mijia-air-purifier-manual.pdf",
-                    ExternalPath = "seed/manuals/mijia-air-purifier-manual.pdf",
-                    AvailabilityStatus = FileAvailabilityStatus.Available,
-                    ContentType = "application/pdf",
-                    SizeBytes = 192000,
-                },
-                Tags = ["客厅", "净化器", "滤芯提醒"]
-            },
-        ]);
     }
 
     public IReadOnlyList<HouseholdMember> GetMembers() => _members;
@@ -218,6 +122,7 @@ public sealed class DocumentCatalogService
     public async Task SaveInsuranceRecordAsync(InsuranceRecord record)
     {
         LastErrorMessage = null;
+        NormalizeInsuranceRecord(record);
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
 
@@ -244,6 +149,7 @@ public sealed class DocumentCatalogService
     public async Task SaveManualRecordAsync(ManualRecord record)
     {
         LastErrorMessage = null;
+        NormalizeManualRecord(record);
         record.LastUpdatedAt = DateTime.Now;
         record.Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id;
 
@@ -335,22 +241,135 @@ public sealed class DocumentCatalogService
 
     public InsuranceRecord CreateInsuranceTemplate() => new()
     {
-        InsuredMemberId = _members[0].Id,
-        EffectiveDate = DateOnly.FromDateTime(DateTime.Today),
-        ExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddYears(1)),
+        Id = Guid.NewGuid(),
+        InsuredMemberId = Guid.Empty,
+        EffectiveDate = default,
+        ExpiryDate = default,
+        IntegrityStatus = string.Empty,
+        Tags = [],
     };
 
     public ManualRecord CreateManualTemplate() => new()
     {
-        SpaceId = _spaces[0].Id,
-        PurchaseDate = DateOnly.FromDateTime(DateTime.Today),
-        WarrantyExpiryDate = DateOnly.FromDateTime(DateTime.Today.AddYears(2)),
+        Id = Guid.NewGuid(),
+        SpaceId = Guid.Empty,
+        PurchaseDate = default,
+        WarrantyExpiryDate = default,
+        IntegrityStatus = string.Empty,
+        Tags = [],
     };
+
+    public IReadOnlyList<ValidationIssue> ValidateInsuranceRecord(
+        InsuranceRecord record,
+        bool hasMemberSelection = true,
+        bool hasCategorySelection = true,
+        bool hasStatusSelection = true,
+        bool hasEffectiveDate = true,
+        bool hasExpiryDate = true)
+    {
+        var issues = new List<ValidationIssue>();
+
+        if (string.IsNullOrWhiteSpace(record.PolicyName))
+        {
+            issues.Add(new("PolicyName", "请填写保单名称。", Code: RequiredFieldCode));
+        }
+
+        if (!hasMemberSelection || record.InsuredMemberId == Guid.Empty)
+        {
+            issues.Add(new("InsuredMemberId", "请选择保障对象。", Code: RequiredFieldCode));
+        }
+
+        if (!hasCategorySelection)
+        {
+            issues.Add(new("InsuranceCategory", "请选择保障类别。", Code: RequiredFieldCode));
+        }
+
+        if (!hasStatusSelection)
+        {
+            issues.Add(new("Status", "请选择当前状态。", Code: RequiredFieldCode));
+        }
+
+        if (string.IsNullOrWhiteSpace(record.ProviderName))
+        {
+            issues.Add(new("ProviderName", "请填写保险公司名称。", Code: RequiredFieldCode));
+        }
+
+        if (!hasEffectiveDate || record.EffectiveDate == default)
+        {
+            issues.Add(new("EffectiveDate", "请选择生效日期。", Code: RequiredFieldCode));
+        }
+
+        if (!hasExpiryDate || record.ExpiryDate == default)
+        {
+            issues.Add(new("ExpiryDate", "请选择到期日期。", Code: RequiredFieldCode));
+        }
+        else if (hasEffectiveDate && record.EffectiveDate != default && record.ExpiryDate < record.EffectiveDate)
+        {
+            issues.Add(new("ExpiryDate", "到期日期不能早于生效日期。", Code: "range"));
+        }
+
+        return issues;
+    }
+
+    public IReadOnlyList<ValidationIssue> ValidateManualRecord(
+        ManualRecord record,
+        bool hasSpaceSelection = true,
+        bool hasCategorySelection = true,
+        bool hasPurchaseDate = true,
+        bool hasWarrantyDate = true)
+    {
+        var issues = new List<ValidationIssue>();
+
+        if (string.IsNullOrWhiteSpace(record.DeviceName))
+        {
+            issues.Add(new("DeviceName", "请填写设备名称。", Code: RequiredFieldCode));
+        }
+
+        if (string.IsNullOrWhiteSpace(record.Brand))
+        {
+            issues.Add(new("Brand", "请填写品牌名称。", Code: RequiredFieldCode));
+        }
+
+        if (!hasSpaceSelection || record.SpaceId == Guid.Empty)
+        {
+            issues.Add(new("SpaceId", "请选择所属空间。", Code: RequiredFieldCode));
+        }
+
+        if (!hasCategorySelection)
+        {
+            issues.Add(new("ManualCategory", "请选择说明书类别。", Code: RequiredFieldCode));
+        }
+
+        if (!hasPurchaseDate || record.PurchaseDate == default)
+        {
+            issues.Add(new("PurchaseDate", "请选择购买日期。", Code: RequiredFieldCode));
+        }
+
+        if (!hasWarrantyDate || record.WarrantyExpiryDate == default)
+        {
+            issues.Add(new("WarrantyExpiryDate", "请选择保修截止日期。", Code: RequiredFieldCode));
+        }
+        else if (hasPurchaseDate && record.PurchaseDate != default && record.WarrantyExpiryDate < record.PurchaseDate)
+        {
+            issues.Add(new("WarrantyExpiryDate", "保修截止日期不能早于购买日期。", Code: "range"));
+        }
+
+        return issues;
+    }
+
+    public string GetMemberDisplayName(Guid memberId)
+        => _members.FirstOrDefault(member => member.Id == memberId)?.DisplayName ?? "未选择";
+
+    public string GetSpaceDisplayName(Guid spaceId)
+        => _spaces.FirstOrDefault(space => space.Id == spaceId)?.Name ?? "未选择";
+
+    public static string NormalizeUserInput(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
     public IEnumerable<DocumentSummary> GetRecentDocuments(int maxItems = 4)
     {
-        var insurance = _insuranceRecords.Select(record => new DocumentSummary(record.Id, record.PolicyName, "保险", record.Summary, AppRoutes.InsuranceDetail(record.Id), record.Tags, record.LastUpdatedAt));
-        var manuals = _manualRecords.Select(record => new DocumentSummary(record.Id, record.DeviceName, "说明书", record.Summary, AppRoutes.ManualDetail(record.Id), record.Tags, record.LastUpdatedAt));
+        var insurance = _insuranceRecords.Select(record => new DocumentSummary(record.Id, PresentationFallbacks.TextOrFallback(record.PolicyName, "未命名保单"), "保险", PresentationFallbacks.TextOrFallback(record.Summary, "暂未填写摘要"), AppRoutes.InsuranceDetail(record.Id), record.Tags, record.LastUpdatedAt));
+        var manuals = _manualRecords.Select(record => new DocumentSummary(record.Id, PresentationFallbacks.TextOrFallback(record.DeviceName, "未命名设备"), "说明书", PresentationFallbacks.TextOrFallback(record.Summary, "暂未填写摘要"), AppRoutes.ManualDetail(record.Id), record.Tags, record.LastUpdatedAt));
         return insurance.Concat(manuals).OrderByDescending(item => item.UpdatedAt).Take(maxItems).ToList();
     }
 
@@ -367,6 +386,10 @@ public sealed class DocumentCatalogService
                 if (refreshed is not null)
                 {
                     UpsertLocal(_insuranceRecords, refreshed, item => item.Id == refreshed.Id);
+                }
+                else
+                {
+                    ApplyUploadMetadata(_insuranceRecords, id, uploadResult);
                 }
 
                 return uploadResult;
@@ -395,6 +418,10 @@ public sealed class DocumentCatalogService
                 if (refreshed is not null)
                 {
                     UpsertLocal(_manualRecords, refreshed, item => item.Id == refreshed.Id);
+                }
+                else
+                {
+                    ApplyUploadMetadata(_manualRecords, id, uploadResult);
                 }
 
                 return uploadResult;
@@ -485,6 +512,65 @@ public sealed class DocumentCatalogService
 
         var index = target.IndexOf(existing);
         target[index] = value;
+    }
+
+    private static void ApplyUploadMetadata(List<InsuranceRecord> records, Guid id, FileStorageResult result)
+    {
+        var record = records.FirstOrDefault(item => item.Id == id);
+        if (record is null)
+        {
+            return;
+        }
+
+        record.AttachmentCount = result.IsSuccess ? 1 : record.AttachmentCount;
+        record.SyncMessage = result.Message;
+        record.PrimaryFile ??= new FileResource();
+        record.PrimaryFile.FileName = result.FileName ?? record.PrimaryFile.FileName;
+        record.PrimaryFile.ExternalPath = result.RemotePath ?? record.PrimaryFile.ExternalPath;
+        record.PrimaryFile.ExternalFileId = result.RemoteId ?? record.PrimaryFile.ExternalFileId;
+        record.PrimaryFile.ContentType = result.ContentType ?? record.PrimaryFile.ContentType;
+        record.PrimaryFile.SizeBytes = result.SizeBytes ?? record.PrimaryFile.SizeBytes;
+        record.PrimaryFile.LastSyncedAt = result.LastSyncedAt ?? record.PrimaryFile.LastSyncedAt ?? DateTime.UtcNow;
+        record.PrimaryFile.AvailabilityStatus = result.AvailabilityStatus;
+    }
+
+    private static void ApplyUploadMetadata(List<ManualRecord> records, Guid id, FileStorageResult result)
+    {
+        var record = records.FirstOrDefault(item => item.Id == id);
+        if (record is null)
+        {
+            return;
+        }
+
+        record.AttachmentCount = result.IsSuccess ? 1 : record.AttachmentCount;
+        record.SyncMessage = result.Message;
+        record.PrimaryFile ??= new FileResource();
+        record.PrimaryFile.FileName = result.FileName ?? record.PrimaryFile.FileName;
+        record.PrimaryFile.ExternalPath = result.RemotePath ?? record.PrimaryFile.ExternalPath;
+        record.PrimaryFile.ExternalFileId = result.RemoteId ?? record.PrimaryFile.ExternalFileId;
+        record.PrimaryFile.ContentType = result.ContentType ?? record.PrimaryFile.ContentType;
+        record.PrimaryFile.SizeBytes = result.SizeBytes ?? record.PrimaryFile.SizeBytes;
+        record.PrimaryFile.LastSyncedAt = result.LastSyncedAt ?? record.PrimaryFile.LastSyncedAt ?? DateTime.UtcNow;
+        record.PrimaryFile.AvailabilityStatus = result.AvailabilityStatus;
+    }
+
+    private static void NormalizeInsuranceRecord(InsuranceRecord record)
+    {
+        record.PolicyName = NormalizeUserInput(record.PolicyName);
+        record.ProviderName = NormalizeUserInput(record.ProviderName);
+        record.ContactName = NormalizeUserInput(record.ContactName);
+        record.ContactPhone = NormalizeUserInput(record.ContactPhone);
+        record.Summary = NormalizeUserInput(record.Summary);
+        record.Tags = [.. record.Tags.Where(tag => !string.IsNullOrWhiteSpace(tag)).Select(tag => tag.Trim())];
+    }
+
+    private static void NormalizeManualRecord(ManualRecord record)
+    {
+        record.DeviceName = NormalizeUserInput(record.DeviceName);
+        record.Brand = NormalizeUserInput(record.Brand);
+        record.Model = NormalizeUserInput(record.Model);
+        record.Summary = NormalizeUserInput(record.Summary);
+        record.Tags = [.. record.Tags.Where(tag => !string.IsNullOrWhiteSpace(tag)).Select(tag => tag.Trim())];
     }
 }
 

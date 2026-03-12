@@ -42,7 +42,8 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
 
         try
         {
-            return await _adminStorageApiClient.GetProfileAsync(profile.ApiBaseUrl, cancellationToken);
+            var remoteProfile = await _adminStorageApiClient.GetProfileAsync(profile.ApiBaseUrl, cancellationToken);
+            return MergeRemoteProfile(profile, remoteProfile);
         }
         catch (Exception ex)
         {
@@ -109,4 +110,21 @@ public sealed class StorageConnectionProfileService : IStorageConnectionProfileS
         => string.IsNullOrWhiteSpace(apiBaseUrl)
             ? StorageConnectionProfile.DefaultBackendApiBaseUrl
             : apiBaseUrl.Trim();
+
+    private static StorageConnectionProfile MergeRemoteProfile(StorageConnectionProfile localProfile, StorageConnectionProfile remoteProfile)
+        => new()
+        {
+            ProfileId = remoteProfile.ProfileId,
+            DisplayName = string.IsNullOrWhiteSpace(remoteProfile.DisplayName) ? localProfile.DisplayName : remoteProfile.DisplayName,
+            ApiBaseUrl = NormalizeApiBaseUrl(remoteProfile.ApiBaseUrl),
+            FileServiceBaseUrl = localProfile.FileServiceBaseUrl,
+            FileServiceApiPath = localProfile.FileServiceApiPath,
+            MongoConnectionStringSecretKey = localProfile.MongoConnectionStringSecretKey,
+            MongoConnectionStringPreview = localProfile.MongoConnectionStringPreview,
+            MongoDatabaseName = localProfile.MongoDatabaseName,
+            IsActive = remoteProfile.IsActive,
+            LastValidatedAt = remoteProfile.LastValidatedAt ?? localProfile.LastValidatedAt,
+            ValidationStatus = remoteProfile.ValidationStatus,
+            ValidationMessage = remoteProfile.ValidationMessage ?? localProfile.ValidationMessage,
+        };
 }

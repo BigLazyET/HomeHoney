@@ -15,19 +15,28 @@
     <FilterBar SearchPlaceholder="搜索设备名称、品牌、标签"
                Filters="_filters" />
 
-    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    @if (!string.IsNullOrWhiteSpace(_state.Message))
     {
-        <StatusBanner Message="@_statusMessage" IsError="false" />
+        <StatusBanner Title="@(_state.Status == CollectionViewStatus.Error ? "资料读取失败" : "资料同步提醒")"
+                      Message="@_state.Message"
+                      IsError="@(_state.Status == CollectionViewStatus.Error)"
+                      IsLoading="@(_state.Status == CollectionViewStatus.Retrying)"
+                      ActionText="@(_state.CanRetry ? "手动重试" : null)"
+                      OnAction="ReloadAsync" />
     }
 
-    @if (_records.Count == 0)
+    @if (_state.Status == CollectionViewStatus.Loading || _state.Status == CollectionViewStatus.Retrying)
     {
-        <EmptyState Icon="📘" Title="还没有说明书资料" Description="录入设备说明书后，可以按空间和品牌快速定位。" />
+        <EmptyState Icon="📘" Title="正在加载说明书资料" Description="请稍候，系统正在尝试读取最新说明书信息。" />
+    }
+    else if (_state.Items.Count == 0 && _state.Status != CollectionViewStatus.Error)
+    {
+        <EmptyState Icon="📘" Title="还没有说明书资料" Description="录入设备说明书后，可以按空间和品牌快速定位。" ActionText="新增说明书" ActionHref="@AppRoutes.ManualNew" />
     }
     else
     {
         <div class="card-stack">
-            @foreach (var record in _records)
+            @foreach (var record in _state.Items)
             {
                 <DocumentCard Title="@record.DeviceName"
                               Category="说明书"
@@ -43,14 +52,33 @@
 </section>
 
 @code {
-    private IReadOnlyList<ManualRecord> _records = [];
+    private RetryableCollectionState<ManualRecord> _state = RetryableCollectionState<ManualRecord>.CreateLoading();
     private readonly IReadOnlyList<string> _filters = ["全部", "按空间", "按品牌", "保修中", "即将到期"];
-    private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        _records = await DocumentCatalogService.GetManualRecordsAsync();
-        _statusMessage = DocumentCatalogService.LastErrorMessage;
+        await LoadAsync();
+    }
+
+    private Task ReloadAsync() => LoadAsync(isRetry: true);
+
+    private async Task LoadAsync(bool isRetry = false)
+    {
+        _state = isRetry
+            ? RetryableCollectionState<ManualRecord>.CreateRetrying(_state.Items, _state.Message)
+            : RetryableCollectionState<ManualRecord>.CreateLoading(_state.Items);
+
+        var records = await DocumentCatalogService.GetManualRecordsAsync();
+        var message = DocumentCatalogService.LastErrorMessage;
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            _state = RetryableCollectionState<ManualRecord>.CreateError(message, records, _state.LastSuccessAt);
+            return;
+        }
+
+        _state = records.Count == 0
+            ? RetryableCollectionState<ManualRecord>.CreateEmpty()
+            : RetryableCollectionState<ManualRecord>.CreateReady(records);
     }
 
     private static IReadOnlyList<string> GetMeta(ManualRecord record) =>

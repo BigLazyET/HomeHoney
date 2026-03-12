@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<SecureSettingsStore>();
         services.AddSingleton<IFileBrowserGateway, FileBrowserGateway>();
         services.AddSingleton<IMongoDatabaseFactory, MongoDatabaseFactory>();
+        services.AddSingleton<MongoIndexInitializer>();
         services.AddSingleton<SeedDataService>();
         services.AddSingleton<DocumentRepository>();
         services.AddSingleton<DocumentFileOrchestrator>();
@@ -43,6 +44,22 @@ public static class DependencyInjection
         services.AddSingleton<BackendProfileService>();
         services.AddSingleton<StorageValidationService>();
         services.AddSingleton<IBackendStorageSettingsService, BackendStorageSettingsService>();
+        return services;
+    }
+
+    public static async Task<IServiceProvider> EnsureMongoIndexesAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("HomeHoney.Api.MongoIndexes");
+
+        try
+        {
+            await services.GetRequiredService<MongoIndexInitializer>().EnsureIndexesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Mongo 索引初始化失败，应用将继续启动。请检查数据库连接和集合权限。");
+        }
+
         return services;
     }
 

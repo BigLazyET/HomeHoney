@@ -8,7 +8,11 @@
 
 @if (_isMissingRecord)
 {
-    <EmptyState Icon="📘" Title="未找到说明书" Description="这份说明书可能已被删除，返回列表后可以重新选择或新建一条资料。" />
+    <EmptyState Icon="📘"
+                Title="未找到说明书"
+                Description="这份说明书可能已被删除，返回列表后可以重新选择或新建一条资料。"
+                ActionText="返回说明书列表"
+                ActionHref="@AppRoutes.ManualsList" />
 }
 else
 {
@@ -26,43 +30,79 @@ else
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
-            <StatusBanner Message="@_statusMessage" />
+            <StatusBanner Title="@_statusTitle" Message="@_statusMessage" IsError="@_isStatusError" />
         }
 
-        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <EditForm Model="_model" OnSubmit="HandleSubmitAsync">
             <div class="form-grid">
                 <label>
-                    <span>设备名称</span>
-                    <InputText @bind-Value="_model.DeviceName" />
+                    <span>设备名称 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.DeviceName" placeholder="例如：海尔冰箱" />
+                    @if (TryGetFieldError("DeviceName", out var deviceError))
+                    {
+                        <small class="field-error">@deviceError</small>
+                    }
                 </label>
                 <label>
-                    <span>品牌</span>
-                    <InputText @bind-Value="_model.Brand" />
+                    <span>品牌 <span class="field-required">*</span></span>
+                    <InputText @bind-Value="_model.Brand" placeholder="例如：Haier" />
+                    @if (TryGetFieldError("Brand", out var brandError))
+                    {
+                        <small class="field-error">@brandError</small>
+                    }
                 </label>
                 <label>
                     <span>型号</span>
-                    <InputText @bind-Value="_model.Model" />
+                    <InputText @bind-Value="_model.Model" placeholder="例如：BCD-501WGHFD14S8U1" />
                 </label>
                 <label>
-                    <span>说明书类别</span>
-                    <InputSelect @bind-Value="_model.ManualCategory">
-                        @foreach (var value in Enum.GetValues<ManualCategory>())
+                    <span>所属空间 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedSpaceId" class="@GetSelectClass(_selectedSpaceId)">
+                        <option value="">请选择所属空间</option>
+                        @foreach (var space in _spaces)
                         {
-                            <option value="@value">@value</option>
+                            <option value="@space.Id.ToString()">@space.Icon @space.Name</option>
                         }
                     </InputSelect>
+                    @if (TryGetFieldError("SpaceId", out var spaceError))
+                    {
+                        <small class="field-error">@spaceError</small>
+                    }
                 </label>
                 <label>
-                    <span>购买日期</span>
-                    <InputDate @bind-Value="_model.PurchaseDate" />
+                    <span>说明书类别 <span class="field-required">*</span></span>
+                    <InputSelect @bind-Value="_selectedCategory" class="@GetSelectClass(_selectedCategory)">
+                        <option value="">请选择说明书类别</option>
+                        @foreach (var value in Enum.GetValues<ManualCategory>())
+                        {
+                            <option value="@value.ToString()">@GetCategoryLabel(value)</option>
+                        }
+                    </InputSelect>
+                    @if (TryGetFieldError("ManualCategory", out var categoryError))
+                    {
+                        <small class="field-error">@categoryError</small>
+                    }
                 </label>
                 <label>
-                    <span>保修截止</span>
-                    <InputDate @bind-Value="_model.WarrantyExpiryDate" />
+                    <span>购买日期 <span class="field-required">*</span></span>
+                    <InputDate @bind-Value="_purchaseDate" class="@GetDateClass(_purchaseDate)" />
+                    @if (TryGetFieldError("PurchaseDate", out var purchaseDateError))
+                    {
+                        <small class="field-error">@purchaseDateError</small>
+                    }
+                </label>
+                <label>
+                    <span>保修截止 <span class="field-required">*</span></span>
+                    <InputDate @bind-Value="_warrantyDate" class="@GetDateClass(_warrantyDate)" />
+                    @if (TryGetFieldError("WarrantyExpiryDate", out var warrantyDateError))
+                    {
+                        <small class="field-error">@warrantyDateError</small>
+                    }
                 </label>
                 <label class="form-grid-span-2">
                     <span>摘要</span>
-                    <InputTextArea @bind-Value="_model.Summary" />
+                    <InputTextArea @bind-Value="_model.Summary" placeholder="例如：保养建议、故障代码、联网步骤等。" />
+                    <small class="field-hint">摘要可帮助家人更快判断这份说明书是否就是要找的那一份。</small>
                 </label>
             </div>
 
@@ -79,8 +119,16 @@ else
     public Guid? Id { get; set; }
 
     private ManualRecord _model = new();
+    private IReadOnlyList<Space> _spaces = [];
     private bool _isMissingRecord;
     private string? _statusMessage;
+    private string? _statusTitle;
+    private bool _isStatusError;
+    private Dictionary<string, string> _fieldErrors = [];
+    private string? _selectedSpaceId;
+    private string? _selectedCategory;
+    private DateOnly? _purchaseDate;
+    private DateOnly? _warrantyDate;
 
     private bool IsEditMode => Id.HasValue;
     private string BackHref => IsEditMode && Id is Guid id ? AppRoutes.GetParentRoute(AppRoutes.ManualEdit(id)) : AppRoutes.ManualsList;
@@ -88,6 +136,8 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _isMissingRecord = false;
+        _fieldErrors = [];
+        _spaces = DocumentCatalogService.GetSpaces();
 
         if (Id is Guid id)
         {
@@ -106,16 +156,51 @@ else
             _model = DocumentCatalogService.CreateManualTemplate();
         }
 
-        _statusMessage = DocumentCatalogService.LastErrorMessage;
+        _selectedSpaceId = _model.SpaceId == Guid.Empty ? string.Empty : _model.SpaceId.ToString();
+        _selectedCategory = _model.PurchaseDate == default && !IsEditMode ? string.Empty : _model.ManualCategory.ToString();
+        _purchaseDate = _model.PurchaseDate == default ? null : _model.PurchaseDate;
+        _warrantyDate = _model.WarrantyExpiryDate == default ? null : _model.WarrantyExpiryDate;
+
+        SetStatus(DocumentCatalogService.LastErrorMessage, isError: !string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage), title: "后端同步提醒");
     }
 
     private async Task HandleSubmitAsync()
     {
-        _statusMessage = null;
+        _fieldErrors = [];
+        _model.DeviceName = DocumentCatalogService.NormalizeUserInput(_model.DeviceName);
+        _model.Brand = DocumentCatalogService.NormalizeUserInput(_model.Brand);
+        _model.Model = DocumentCatalogService.NormalizeUserInput(_model.Model);
+        _model.Summary = DocumentCatalogService.NormalizeUserInput(_model.Summary);
+        _model.SpaceId = Guid.TryParse(_selectedSpaceId, out var spaceId) ? spaceId : Guid.Empty;
+        _model.PurchaseDate = _purchaseDate ?? default;
+        _model.WarrantyExpiryDate = _warrantyDate ?? default;
+
+        if (Enum.TryParse<ManualCategory>(_selectedCategory, true, out var category))
+        {
+            _model.ManualCategory = category;
+        }
+
+        foreach (var issue in DocumentCatalogService.ValidateManualRecord(
+                     _model,
+                     !string.IsNullOrWhiteSpace(_selectedSpaceId),
+                     !string.IsNullOrWhiteSpace(_selectedCategory),
+                     _purchaseDate.HasValue,
+                     _warrantyDate.HasValue))
+        {
+            _fieldErrors[issue.FieldKey] = issue.Message;
+        }
+
+        if (_fieldErrors.Count > 0)
+        {
+            SetStatus("请先完善标记为必填的字段，再继续保存。", isError: true, title: "表单尚未填写完整");
+            return;
+        }
+
+        SetStatus(null, isError: false);
         await DocumentCatalogService.SaveManualRecordAsync(_model);
         if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
         {
-            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            SetStatus(DocumentCatalogService.LastErrorMessage, isError: true, title: "保存失败");
             return;
         }
 
@@ -135,14 +220,39 @@ else
             return;
         }
 
-        _statusMessage = null;
+        SetStatus(null, isError: false);
         await DocumentCatalogService.DeleteManualRecordAsync(_model.Id);
         if (!string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
         {
-            _statusMessage = DocumentCatalogService.LastErrorMessage;
+            SetStatus(DocumentCatalogService.LastErrorMessage, isError: true, title: "删除失败");
             return;
         }
 
         NavigationManager.NavigateTo(AppRoutes.ManualsList);
     }
+
+    private bool TryGetFieldError(string fieldKey, out string? error)
+        => _fieldErrors.TryGetValue(fieldKey, out error);
+
+    private void SetStatus(string? message, bool isError, string? title = null)
+    {
+        _statusMessage = message;
+        _isStatusError = isError;
+        _statusTitle = title;
+    }
+
+    private static string GetSelectClass(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "placeholder-selected" : string.Empty;
+
+    private static string GetDateClass(DateOnly? value)
+        => value.HasValue ? string.Empty : "placeholder-selected";
+
+    private static string GetCategoryLabel(ManualCategory category) => category switch
+    {
+        ManualCategory.Appliance => "家电",
+        ManualCategory.Furniture => "家具",
+        ManualCategory.Electronics => "电子设备",
+        ManualCategory.Kids => "儿童用品",
+        _ => "其他",
+    };
 }

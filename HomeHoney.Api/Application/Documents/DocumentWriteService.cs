@@ -132,7 +132,16 @@ public sealed class DocumentWriteService
     {
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
         var upload = await _fileBrowserGateway.UploadFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, folderPath, fileName, content, contentType, cancellationToken);
-        return new FileStorageResult(upload.IsSuccess, upload.Message, upload.File?.Path, upload.File?.Path, upload.File?.ContentType, upload.File?.SizeBytes, upload.IsSuccess ? FileAvailabilityStatus.Available : FileAvailabilityStatus.SyncError);
+        return new FileStorageResult(
+            upload.IsSuccess,
+            upload.Message,
+            upload.File?.Path,
+            upload.File?.Path,
+            upload.File?.Name,
+            upload.File?.ContentType,
+            upload.File?.SizeBytes,
+            DateTime.UtcNow,
+            upload.IsSuccess ? FileAvailabilityStatus.Available : FileAvailabilityStatus.SyncError);
     }
 
     private async Task<FileBrowserDownloadResult> DownloadFileAsync(string? remotePath, CancellationToken cancellationToken)

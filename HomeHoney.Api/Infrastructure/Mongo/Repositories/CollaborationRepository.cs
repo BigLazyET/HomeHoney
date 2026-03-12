@@ -23,10 +23,12 @@ public sealed class CollaborationRepository
         {
             var items = await database.GetCollection<FridgeNote>(BusinessCollections.FridgeNotes)
                 .Find(FilterDefinition<FridgeNote>.Empty)
+                .SortByDescending(note => note.IsPinned)
+                .ThenBy(note => note.DueAt)
                 .ToListAsync(cancellationToken);
             if (items.Count > 0)
             {
-                return items.OrderByDescending(note => note.IsPinned).ThenBy(note => note.DueAt).ToList();
+                return items;
             }
         }
 
@@ -40,10 +42,12 @@ public sealed class CollaborationRepository
         {
             var items = await database.GetCollection<Memo>(BusinessCollections.Memos)
                 .Find(FilterDefinition<Memo>.Empty)
+                .SortBy(memo => memo.DueAt)
+                .ThenByDescending(memo => memo.UpdatedAt)
                 .ToListAsync(cancellationToken);
             if (items.Count > 0)
             {
-                return items.OrderBy(memo => memo.DueAt).ToList();
+                return items;
             }
         }
 
