@@ -11,9 +11,11 @@ public sealed class SecureSettingsStore
     private const string BackendValidationStatusKey = "backend.profile.validation-status";
     private const string BackendValidationMessageKey = "backend.profile.validation-message";
     private const string DownstreamMongoConnectionKey = "backend.storage.mongo-connection";
+    private const string DownstreamFileServicePasswordKey = "backend.storage.file-service-password";
     private const string DownstreamLastValidatedAtKey = "backend.storage.last-validated-at";
     private const string DownstreamValidationStatusKey = "backend.storage.validation-status";
     private const string DownstreamValidationMessageKey = "backend.storage.validation-message";
+    private const string DownstreamFileServiceAuthHeaderValueKey = "backend.storage.file-service-auth-header-value";
 
     private readonly IConfiguration _configuration;
     private readonly ConcurrentDictionary<string, string> _overrides = new(StringComparer.Ordinal);
@@ -43,12 +45,16 @@ public sealed class SecureSettingsStore
 
     public DownstreamStorageSettingsDto GetDownstreamSettings()
     {
-        var options = _configuration.GetSection(BackendStorageOptions.SectionName).Get<BackendStorageOptions>() ?? new BackendStorageOptions();
-        var connectionString = GetValue(DownstreamMongoConnectionKey, options.MongoConnectionString);
+        var options = GetEffectiveStorageOptions();
+        var connectionString = options.MongoConnectionString;
         return new()
         {
             FileServiceBaseUrl = options.FileServiceBaseUrl,
             FileServiceApiPath = options.FileServiceApiPath,
+            FileServiceUsername = options.FileServiceUsername,
+            FileServiceAuthHeaderName = options.FileServiceAuthHeaderName,
+            HasFileServicePassword = !string.IsNullOrWhiteSpace(options.FileServicePassword),
+            HasFileServiceAuthHeaderValue = !string.IsNullOrWhiteSpace(options.FileServiceAuthHeaderValue),
             MongoDatabaseName = options.MongoDatabaseName,
             LastValidatedAt = GetDateTimeValue(DownstreamLastValidatedAtKey),
             MongoConnectionStringPreview = MaskConnectionString(connectionString),
@@ -61,6 +67,26 @@ public sealed class SecureSettingsStore
     {
         _overrides[$"{BackendStorageOptions.SectionName}:FileServiceBaseUrl"] = request.FileServiceBaseUrl.TrimEnd('/');
         _overrides[$"{BackendStorageOptions.SectionName}:FileServiceApiPath"] = request.FileServiceApiPath;
+        if (request.FileServiceUsername is not null)
+        {
+            _overrides[$"{BackendStorageOptions.SectionName}:FileServiceUsername"] = request.FileServiceUsername.Trim();
+        }
+
+        if (request.FileServicePassword is not null)
+        {
+            _overrides[DownstreamFileServicePasswordKey] = request.FileServicePassword;
+        }
+
+        if (request.FileServiceAuthHeaderName is not null)
+        {
+            _overrides[$"{BackendStorageOptions.SectionName}:FileServiceAuthHeaderName"] = request.FileServiceAuthHeaderName.Trim();
+        }
+
+        if (request.FileServiceAuthHeaderValue is not null)
+        {
+            _overrides[DownstreamFileServiceAuthHeaderValueKey] = request.FileServiceAuthHeaderValue;
+        }
+
         _overrides[$"{BackendStorageOptions.SectionName}:MongoDatabaseName"] = request.MongoDatabaseName;
         _overrides[DownstreamMongoConnectionKey] = request.MongoConnectionString;
         return GetDownstreamSettings();
@@ -85,8 +111,42 @@ public sealed class SecureSettingsStore
         var options = _configuration.GetSection(BackendStorageOptions.SectionName).Get<BackendStorageOptions>() ?? new BackendStorageOptions();
         options.FileServiceBaseUrl = GetValue($"{BackendStorageOptions.SectionName}:FileServiceBaseUrl", options.FileServiceBaseUrl);
         options.FileServiceApiPath = GetValue($"{BackendStorageOptions.SectionName}:FileServiceApiPath", options.FileServiceApiPath);
+        options.FileServiceUsername = GetValue($"{BackendStorageOptions.SectionName}:FileServiceUsername", options.FileServiceUsername);
+        options.FileServicePassword = GetValue(DownstreamFileServicePasswordKey, options.FileServicePassword);
+        options.FileServiceAuthHeaderName = GetValue($"{BackendStorageOptions.SectionName}:FileServiceAuthHeaderName", options.FileServiceAuthHeaderName);
+        options.FileServiceAuthHeaderValue = GetValue(DownstreamFileServiceAuthHeaderValueKey, options.FileServiceAuthHeaderValue);
         options.MongoDatabaseName = GetValue($"{BackendStorageOptions.SectionName}:MongoDatabaseName", options.MongoDatabaseName);
         options.MongoConnectionString = GetValue(DownstreamMongoConnectionKey, options.MongoConnectionString);
+        return options;
+    }
+
+    public BackendStorageOptions GetEffectiveStorageOptions(UpdateDownstreamStorageSettingsRequest request)
+    {
+        var options = GetEffectiveStorageOptions();
+        options.FileServiceBaseUrl = request.FileServiceBaseUrl.TrimEnd('/');
+        options.FileServiceApiPath = request.FileServiceApiPath;
+        if (request.FileServiceUsername is not null)
+        {
+            options.FileServiceUsername = request.FileServiceUsername.Trim();
+        }
+
+        if (request.FileServicePassword is not null)
+        {
+            options.FileServicePassword = request.FileServicePassword;
+        }
+
+        if (request.FileServiceAuthHeaderName is not null)
+        {
+            options.FileServiceAuthHeaderName = request.FileServiceAuthHeaderName.Trim();
+        }
+
+        if (request.FileServiceAuthHeaderValue is not null)
+        {
+            options.FileServiceAuthHeaderValue = request.FileServiceAuthHeaderValue;
+        }
+
+        options.MongoDatabaseName = request.MongoDatabaseName;
+        options.MongoConnectionString = request.MongoConnectionString;
         return options;
     }
 

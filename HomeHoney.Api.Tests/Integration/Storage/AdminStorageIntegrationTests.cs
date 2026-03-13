@@ -34,6 +34,8 @@ public sealed class AdminStorageIntegrationTests : IClassFixture<ApiWebApplicati
         {
             FileServiceBaseUrl = "http://localhost:8999",
             FileServiceApiPath = "/api",
+            FileServiceUsername = "homehoney",
+            FileServicePassword = "secret-token",
             MongoDatabaseName = "homehoney",
             MongoConnectionString = "mongodb://localhost:27017/homehoney"
         });
@@ -45,6 +47,8 @@ public sealed class AdminStorageIntegrationTests : IClassFixture<ApiWebApplicati
 
         Assert.Equal("家庭后端", profile?.DisplayName);
         Assert.Equal("http://localhost:8999", storage?.FileServiceBaseUrl);
+        Assert.Equal("homehoney", storage?.FileServiceUsername);
+        Assert.True(storage?.HasFileServicePassword);
         Assert.Equal(ValidationStatusDto.Valid, storage?.ValidationStatus);
         Assert.StartsWith("mongodb://", storage?.MongoConnectionStringPreview);
     }

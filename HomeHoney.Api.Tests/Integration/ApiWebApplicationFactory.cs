@@ -24,16 +24,16 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
 
 	private sealed class FakeFileBrowserGateway : IFileBrowserGateway
 	{
-		public Task<FileBrowserValidationResult> ValidateConnectionAsync(string baseUrl, string apiPath, CancellationToken cancellationToken = default)
+		public Task<FileBrowserValidationResult> ValidateConnectionAsync(FileBrowserConnectionOptions connectionOptions, CancellationToken cancellationToken = default)
 			=> Task.FromResult(TestServiceOverrides.FileBrowserValidationResult);
 
-		public Task<FileBrowserUploadResult> UploadFileAsync(string baseUrl, string apiPath, string folderPath, string fileName, Stream content, string? contentType, CancellationToken cancellationToken = default)
+		public Task<FileBrowserUploadResult> UploadFileAsync(FileBrowserConnectionOptions connectionOptions, string folderPath, string fileName, Stream content, string? contentType, CancellationToken cancellationToken = default)
 			=> Task.FromResult(TestServiceOverrides.FileBrowserUploadResult);
 
-		public Task<FileBrowserDownloadResult> DownloadFileAsync(string baseUrl, string apiPath, string remotePath, CancellationToken cancellationToken = default)
+		public Task<FileBrowserDownloadResult> DownloadFileAsync(FileBrowserConnectionOptions connectionOptions, string remotePath, CancellationToken cancellationToken = default)
 			=> Task.FromResult(TestServiceOverrides.FileBrowserDownloadResult);
 
-		public Task<FileBrowserDeleteResult> DeleteFileAsync(string baseUrl, string apiPath, string remotePath, CancellationToken cancellationToken = default)
+		public Task<FileBrowserDeleteResult> DeleteFileAsync(FileBrowserConnectionOptions connectionOptions, string remotePath, CancellationToken cancellationToken = default)
 			=> Task.FromResult(TestServiceOverrides.FileBrowserDeleteResult);
 	}
 

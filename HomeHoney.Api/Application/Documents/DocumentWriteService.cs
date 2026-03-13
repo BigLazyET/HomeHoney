@@ -54,7 +54,7 @@ public sealed class DocumentWriteService
         if (record?.PrimaryFile?.ExternalPath is { Length: > 0 } filePath)
         {
             var options = _secureSettingsStore.GetEffectiveStorageOptions();
-            await _fileBrowserGateway.DeleteFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, filePath, cancellationToken);
+            await _fileBrowserGateway.DeleteFileAsync(ToConnectionOptions(options), filePath, cancellationToken);
         }
 
         var removed = await DeleteEntityAsync<InsuranceRecord>(DocumentCollections.InsuranceRecords, id, item => item.Id == id, cancellationToken);
@@ -69,7 +69,7 @@ public sealed class DocumentWriteService
         if (record?.PrimaryFile?.ExternalPath is { Length: > 0 } filePath)
         {
             var options = _secureSettingsStore.GetEffectiveStorageOptions();
-            await _fileBrowserGateway.DeleteFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, filePath, cancellationToken);
+            await _fileBrowserGateway.DeleteFileAsync(ToConnectionOptions(options), filePath, cancellationToken);
         }
 
         var removed = await DeleteEntityAsync<ManualRecord>(DocumentCollections.ManualRecords, id, item => item.Id == id, cancellationToken);
@@ -131,7 +131,7 @@ public sealed class DocumentWriteService
     private async Task<FileStorageResult> UploadFileAsync(string folderPath, Stream content, string fileName, string? contentType, CancellationToken cancellationToken)
     {
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
-        var upload = await _fileBrowserGateway.UploadFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, folderPath, fileName, content, contentType, cancellationToken);
+        var upload = await _fileBrowserGateway.UploadFileAsync(ToConnectionOptions(options), folderPath, fileName, content, contentType, cancellationToken);
         return new FileStorageResult(
             upload.IsSuccess,
             upload.Message,
@@ -152,8 +152,19 @@ public sealed class DocumentWriteService
         }
 
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
-        return await _fileBrowserGateway.DownloadFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, remotePath, cancellationToken);
+        return await _fileBrowserGateway.DownloadFileAsync(ToConnectionOptions(options), remotePath, cancellationToken);
     }
+
+    private static FileBrowserConnectionOptions ToConnectionOptions(BackendStorageOptions options)
+        => new()
+        {
+            BaseUrl = options.FileServiceBaseUrl,
+            ApiPath = options.FileServiceApiPath,
+            FileServiceUsername = options.FileServiceUsername,
+            FileServicePassword = options.FileServicePassword,
+            FileServiceAuthHeaderName = options.FileServiceAuthHeaderName,
+            FileServiceAuthHeaderValue = options.FileServiceAuthHeaderValue,
+        };
 
     private async Task SaveEntityAsync<T>(string collectionName, T entity, Func<T, bool> seedPredicate, CancellationToken cancellationToken)
     {

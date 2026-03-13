@@ -19,7 +19,7 @@ public sealed class DocumentFileOrchestrator
     public async Task<FileStorageResult> UploadPrimaryFileAsync(string folderPath, Stream content, string fileName, string? contentType, CancellationToken cancellationToken = default)
     {
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
-        var upload = await _fileBrowserGateway.UploadFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, folderPath, fileName, content, contentType, cancellationToken);
+        var upload = await _fileBrowserGateway.UploadFileAsync(ToConnectionOptions(options), folderPath, fileName, content, contentType, cancellationToken);
         return new FileStorageResult(
             upload.IsSuccess,
             upload.Message,
@@ -40,7 +40,7 @@ public sealed class DocumentFileOrchestrator
         }
 
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
-        return await _fileBrowserGateway.DownloadFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, remotePath, cancellationToken);
+        return await _fileBrowserGateway.DownloadFileAsync(ToConnectionOptions(options), remotePath, cancellationToken);
     }
 
     public async Task<FileBrowserDeleteResult> DeletePrimaryFileAsync(string? remotePath, CancellationToken cancellationToken = default)
@@ -51,6 +51,17 @@ public sealed class DocumentFileOrchestrator
         }
 
         var options = _secureSettingsStore.GetEffectiveStorageOptions();
-        return await _fileBrowserGateway.DeleteFileAsync(options.FileServiceBaseUrl, options.FileServiceApiPath, remotePath, cancellationToken);
+        return await _fileBrowserGateway.DeleteFileAsync(ToConnectionOptions(options), remotePath, cancellationToken);
     }
+
+    private static FileBrowserConnectionOptions ToConnectionOptions(BackendStorageOptions options)
+        => new()
+        {
+            BaseUrl = options.FileServiceBaseUrl,
+            ApiPath = options.FileServiceApiPath,
+            FileServiceUsername = options.FileServiceUsername,
+            FileServicePassword = options.FileServicePassword,
+            FileServiceAuthHeaderName = options.FileServiceAuthHeaderName,
+            FileServiceAuthHeaderValue = options.FileServiceAuthHeaderValue,
+        };
 }

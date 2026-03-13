@@ -1,5 +1,26 @@
 namespace HomeHoney.Api.Infrastructure.FileBrowser;
 
+public sealed class FileBrowserConnectionOptions
+{
+    public string BaseUrl { get; set; } = string.Empty;
+
+    public string ApiPath { get; set; } = "/api";
+
+    public string FileServiceUsername { get; set; } = string.Empty;
+
+    public string FileServicePassword { get; set; } = string.Empty;
+
+    public string FileServiceAuthHeaderName { get; set; } = string.Empty;
+
+    public string FileServiceAuthHeaderValue { get; set; } = string.Empty;
+
+    public bool HasJsonCredentials
+        => !string.IsNullOrWhiteSpace(FileServiceUsername) || !string.IsNullOrWhiteSpace(FileServicePassword);
+
+    public bool HasProxyHeader
+        => !string.IsNullOrWhiteSpace(FileServiceAuthHeaderName) || !string.IsNullOrWhiteSpace(FileServiceAuthHeaderValue);
+}
+
 public sealed class FileBrowserFileDescriptor
 {
     public string? Path { get; set; }

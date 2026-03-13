@@ -6,6 +6,14 @@ public sealed class DownstreamStorageSettingsDto
 
     public string FileServiceApiPath { get; set; } = "/api";
 
+    public string FileServiceUsername { get; set; } = string.Empty;
+
+    public string FileServiceAuthHeaderName { get; set; } = string.Empty;
+
+    public bool HasFileServicePassword { get; set; }
+
+    public bool HasFileServiceAuthHeaderValue { get; set; }
+
     public string MongoDatabaseName { get; set; } = "homehoney";
 
     public DateTime? LastValidatedAt { get; set; }
@@ -29,6 +37,14 @@ public sealed class UpdateDownstreamStorageSettingsRequest
     public string FileServiceBaseUrl { get; set; } = string.Empty;
 
     public string FileServiceApiPath { get; set; } = "/api";
+
+    public string? FileServiceUsername { get; set; }
+
+    public string? FileServicePassword { get; set; }
+
+    public string? FileServiceAuthHeaderName { get; set; }
+
+    public string? FileServiceAuthHeaderValue { get; set; }
 
     public string MongoDatabaseName { get; set; } = string.Empty;
 
