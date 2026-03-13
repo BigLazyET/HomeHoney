@@ -104,7 +104,8 @@ public sealed class DocumentApiClient : IDocumentApiClient
         using var response = await client.PostAsync(requestUri, form, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return new(false, $"上传失败：{(int)response.StatusCode} {response.ReasonPhrase}", AvailabilityStatus: FileAvailabilityStatus.SyncError);
+            var failureMessage = await ReadFailureMessageAsync(response, cancellationToken);
+            return new(false, failureMessage, AvailabilityStatus: FileAvailabilityStatus.SyncError);
         }
 
         var envelope = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
@@ -119,6 +120,58 @@ public sealed class DocumentApiClient : IDocumentApiClient
         }
 
         return new(true, message, file?.ExternalPath, file?.ExternalFileId, file?.FileName, file?.ContentType, file?.SizeBytes, file?.LastSyncedAt, file?.AvailabilityStatus ?? FileAvailabilityStatus.Available);
+    }
+
+    private static async Task<string> ReadFailureMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var payload = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions, cancellationToken);
+
+            if (payload.ValueKind == JsonValueKind.Object)
+            {
+                if (payload.TryGetProperty("result", out var resultElement) &&
+                    resultElement.ValueKind == JsonValueKind.Object &&
+                    resultElement.TryGetProperty("message", out var messageElement) &&
+                    messageElement.GetString() is { Length: > 0 } resultMessage)
+                {
+                    return resultMessage;
+                }
+
+                if (payload.TryGetProperty("title", out var titleElement) &&
+                    payload.TryGetProperty("detail", out var detailElement))
+                {
+                    var title = titleElement.GetString();
+                    var detail = detailElement.GetString();
+                    if (!string.IsNullOrWhiteSpace(detail))
+                    {
+                        return detail!;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(title))
+                    {
+                        return title!;
+                    }
+                }
+
+                if (payload.TryGetProperty("message", out var directMessageElement) && directMessageElement.GetString() is { Length: > 0 } payloadMessage)
+                {
+                    return payloadMessage;
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to plain-text response parsing below.
+        }
+
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            return raw.Trim();
+        }
+
+        return $"上传失败：{(int)response.StatusCode} {response.ReasonPhrase}";
     }
 
     private async Task<FileDownloadResult> DownloadAsync(string requestUri, CancellationToken cancellationToken)

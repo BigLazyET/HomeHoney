@@ -1,10 +1,12 @@
 @page "/documents/insurance/{Id:guid}"
 @inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
+@inject HomeHoney.Services.Storage.IAttachmentFilePicker AttachmentFilePicker
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @using HomeHoney.Models
 @using HomeHoney.Components.Shared
-@using Microsoft.AspNetCore.Components.Forms
+@using System.Diagnostics
+@using System.IO
 
 @if (_record is null)
 {
@@ -65,14 +67,16 @@ else
                 </div>
 
                 <div class="detail-actions">
-                    <label class="button-secondary file-picker-button">
-                        <span>@(_selectedUploadName is null ? "选择附件" : $"已选择：{_selectedUploadName}")</span>
-                        <InputFile OnChange="HandleFileSelectedAsync" class="sr-only-file-input" />
-                    </label>
+                    <button class="button-secondary"
+                            type="button"
+                            @onclick="HandlePickFileAsync"
+                            disabled="@_isUploading">
+                        @(_selectedAttachment is null ? "选择附件" : $"已选择：{_selectedAttachment.FileName}")
+                    </button>
                     <button class="button-primary"
                             type="button"
                             @onclick="HandleUploadAsync"
-                            disabled="@(_selectedFile is null || _isUploading)">
+                            disabled="@_isUploading">
                         @(_isUploading ? "上传中..." : "上传附件")
                     </button>
                     <button class="button-secondary"
@@ -94,8 +98,7 @@ else
     private InsuranceRecord? _record;
     private string? _statusMessage;
     private bool _isStatusError;
-    private IBrowserFile? _selectedFile;
-    private string? _selectedUploadName;
+    private HomeHoney.Services.Storage.AttachmentFilePickResult? _selectedAttachment;
     private bool _isUploading;
     private bool _isDownloading;
 
@@ -132,18 +135,34 @@ else
         NavigationManager.NavigateTo(AppRoutes.InsuranceList);
     }
 
-    private Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
+    private async Task HandlePickFileAsync()
     {
-        _selectedFile = args.File;
-        _selectedUploadName = _selectedFile?.Name;
-        _statusMessage = _selectedFile is null ? null : $"已选择附件“{_selectedUploadName}”，点击上传后会同步到后端。";
-        _isStatusError = false;
-        return Task.CompletedTask;
+        try
+        {
+            var picked = await AttachmentFilePicker.PickAsync();
+            if (picked is null)
+            {
+                _statusMessage = "未获取到所选附件，请重试。如果你刚刚已经选中文件，但仍看到这条提示，请重新打开应用后再试一次。";
+                _isStatusError = true;
+                return;
+            }
+
+            _selectedAttachment = picked;
+            _statusMessage = $"已选择附件“{picked.FileName}”（{PresentationFallbacks.FileSizeOrFallback(picked.SizeBytes, "大小未知")}），点击上传后会同步到后端。";
+            _isStatusError = false;
+        }
+        catch (Exception ex)
+        {
+            _selectedAttachment = null;
+            _statusMessage = ex is InvalidOperationException ? ex.Message : "打开附件选择器失败，请稍后重试。";
+            _isStatusError = true;
+            Debug.WriteLine($"InsuranceDetail.HandlePickFileAsync Error: {ex}");
+        }
     }
 
     private async Task HandleUploadAsync()
     {
-        if (_record is null || _selectedFile is null)
+        if (_record is null || _selectedAttachment is null)
         {
             _statusMessage = "请先选择要上传的附件。";
             _isStatusError = true;
@@ -154,8 +173,8 @@ else
         _statusMessage = null;
         _isStatusError = false;
 
-        await using var stream = _selectedFile.OpenReadStream(25 * 1024 * 1024);
-        var result = await DocumentCatalogService.UploadInsuranceFileAsync(_record.Id, stream, _selectedFile.Name, _selectedFile.ContentType);
+        await using var stream = new MemoryStream(_selectedAttachment.Content, writable: false);
+        var result = await DocumentCatalogService.UploadInsuranceFileAsync(_record.Id, stream, _selectedAttachment.FileName, _selectedAttachment.ContentType);
 
         _isUploading = false;
         if (!result.IsSuccess || !string.IsNullOrWhiteSpace(DocumentCatalogService.LastErrorMessage))
@@ -165,8 +184,7 @@ else
             return;
         }
 
-        _selectedFile = null;
-        _selectedUploadName = null;
+        _selectedAttachment = null;
         _record = await DocumentCatalogService.GetInsuranceRecordAsync(Id);
         _statusMessage = result.Message;
         _isStatusError = false;

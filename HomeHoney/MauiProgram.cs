@@ -1,4 +1,5 @@
-﻿using HomeHoney.Services;
+﻿using CommunityToolkit.Maui;
+using HomeHoney.Services;
 using HomeHoney.Services.Collaboration;
 using HomeHoney.Services.Documents;
 using HomeHoney.Services.Navigation;
@@ -17,6 +18,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -39,6 +41,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ISearchApiClient, SearchApiClient>();
 		builder.Services.AddSingleton<IPreferenceApiClient, PreferenceApiClient>();
 		builder.Services.AddSingleton<IAdminStorageApiClient, AdminStorageApiClient>();
+		builder.Services.AddSingleton<IAttachmentFilePicker, MauiAttachmentFilePicker>();
 		builder.Services.AddSingleton<UserPreferenceService>();
 		builder.Services.AddSingleton<DocumentCatalogService>();
 		builder.Services.AddSingleton<FamilyCollaborationService>();
