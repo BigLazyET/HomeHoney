@@ -42,6 +42,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPreferenceApiClient, PreferenceApiClient>();
 		builder.Services.AddSingleton<IAdminStorageApiClient, AdminStorageApiClient>();
 		builder.Services.AddSingleton<IAttachmentFilePicker, MauiAttachmentFilePicker>();
+		builder.Services.AddSingleton<IAttachmentFileSaver, MauiAttachmentFileSaver>();
 		builder.Services.AddSingleton<UserPreferenceService>();
 		builder.Services.AddSingleton<DocumentCatalogService>();
 		builder.Services.AddSingleton<FamilyCollaborationService>();

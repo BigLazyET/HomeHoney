@@ -57,20 +57,18 @@ public sealed class FileBrowserGateway : IFileBrowserGateway
                 return new(false, auth.Message);
             }
 
-            using var form = new MultipartFormDataContent();
             using var streamContent = new StreamContent(content);
             streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType ?? "application/octet-stream");
-            form.Add(streamContent, "files", fileName);
 
-            using var request = CreateRequest(HttpMethod.Post, BuildResourceUri(apiBase!, folderPath), auth.Token, connectionOptions);
-            request.Content = form;
+            var remotePath = CombinePath(folderPath, fileName);
+            using var request = CreateRequest(HttpMethod.Post, BuildResourceUri(apiBase!, remotePath), auth.Token, connectionOptions);
+            request.Content = streamContent;
             using var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 return new(false, await BuildFailureMessageAsync("文件服务上传失败", response, cancellationToken));
             }
 
-            var remotePath = CombinePath(folderPath, fileName);
             return new(true, "上传成功。", new FileBrowserFileDescriptor
             {
                 Path = remotePath,

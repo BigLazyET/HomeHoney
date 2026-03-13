@@ -36,7 +36,8 @@ public sealed class FileBrowserGatewayTests
             {
                 Assert.Equal(HttpMethod.Post, upload.Method);
                 Assert.Equal("jwt-token", upload.Headers.GetValues("X-Auth").Single());
-                Assert.Equal("http://localhost:8999/api/resources/insurance/123", upload.RequestUri?.ToString());
+                Assert.Equal("http://localhost:8999/api/resources/insurance/123/policy.pdf", upload.RequestUri?.ToString());
+                Assert.Equal("application/pdf", upload.Content?.Headers.ContentType?.MediaType);
             });
     }
 

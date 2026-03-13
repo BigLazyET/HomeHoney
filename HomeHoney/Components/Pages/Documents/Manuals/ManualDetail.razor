@@ -1,6 +1,7 @@
 @page "/documents/manuals/{Id:guid}"
 @inject HomeHoney.Services.Documents.DocumentCatalogService DocumentCatalogService
 @inject HomeHoney.Services.Storage.IAttachmentFilePicker AttachmentFilePicker
+@inject HomeHoney.Services.Storage.IAttachmentFileSaver AttachmentFileSaver
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @using HomeHoney.Models
@@ -212,14 +213,12 @@ else
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync(
-            "homeHoneyDownloads.saveFile",
-            result.FileName ?? _record.PrimaryFile.FileName,
-            result.ContentType ?? _record.PrimaryFile.ContentType,
-            Convert.ToBase64String(result.Content));
+        var saveResult = await AttachmentFileSaver.SaveAsync(
+            result.Content,
+            result.FileName ?? _record.PrimaryFile.FileName);
 
-        _statusMessage = result.Message;
-        _isStatusError = false;
+        _statusMessage = saveResult.Message;
+        _isStatusError = !saveResult.IsSuccess && !saveResult.WasCancelled;
     }
 
     private static string GetFileStatusLabel(FileResource? file)
